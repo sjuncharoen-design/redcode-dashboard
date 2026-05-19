@@ -7,32 +7,32 @@
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.2/babel.min.js"></script>
-  <!-- prices.js เธชเธฃเนเธฒเธเนเธ”เธข generate_prices.py โ€” เธเธฐ override เธฃเธฒเธเธฒ hardcode -->
-  <script src="prices.js" onerror="console.info('prices.js not found โ€” using INIT_PRICES')"></script>
+  <!-- prices.js สร้างโดย generate_prices.py — จะ override ราคา hardcode -->
+  <script src="prices.js" onerror="console.info('prices.js not found — using INIT_PRICES')"></script>
 </head>
 <body style="margin:0;padding:0;background:#f8fafc">
 
   <div id="app-loader" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f8fafc;z-index:9999">
     <div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:sp .8s linear infinite"></div>
-    <div style="color:#94a3b8;font-size:13px;margin-top:14px;font-family:sans-serif">เธเธณเธฅเธฑเธเนเธซเธฅเธ”โ€ฆ</div>
+    <div style="color:#94a3b8;font-size:13px;margin-top:14px;font-family:sans-serif">กำลังโหลด…</div>
     <style>@keyframes sp{to{transform:rotate(360deg)}}</style>
   </div>
   <div id="root"></div>
   <script>
     window.addEventListener('error',function(e){
       var d=document.getElementById('app-loader');
-      if(d)d.innerHTML='<div style="color:#dc2626;font-family:sans-serif;text-align:center;padding:20px">โ '+e.message+'<br><small style="color:#94a3b8">F12 โ’ Console</small></div>';
+      if(d)d.innerHTML='<div style="color:#dc2626;font-family:sans-serif;text-align:center;padding:20px">❌ '+e.message+'<br><small style="color:#94a3b8">F12 → Console</small></div>';
     });
   </script>
 
   <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
 
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// ═══════════════════════════════════════════════════
 //  DATA
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-const _HARDCODED_PORTS = []; // data stored in localStorage
-// เนเธซเธฅเธ”เธเธฒเธ localStorage เธเนเธญเธ เธ–เนเธฒเนเธกเนเธกเธตเนเธซเนเนเธเน hardcoded เนเธฅเนเธง save เนเธงเน
+// ═══════════════════════════════════════════════════
+const _HARDCODED_PORTS = [];
+// โหลดจาก localStorage ก่อน ถ้าไม่มีให้ใช้ hardcoded แล้ว save ไว้
 const INIT_PORTS = (() => {
   try {
     const s = localStorage.getItem('rc_init_ports');
@@ -41,20 +41,20 @@ const INIT_PORTS = (() => {
     return _HARDCODED_PORTS;
   } catch { return _HARDCODED_PORTS; }
 })();
-// fallback hardcode (เนเธเนเน€เธกเธทเนเธญ prices.js เนเธกเนเธกเธตเธซเธฃเธทเธญเนเธกเนเธกเธตเธฃเธฒเธเธฒ)
+// fallback hardcode (ใช้เมื่อ prices.js ไม่มีหรือไม่มีราคา)
 const _FALLBACK = { ADVICE:5.95, DOHOME:3.40, PR9:16.30, WASH:4.50, SGC:0.94, "SGC-W2":0.24, CHAYO:1.05, JMART:7.30, JMT:10.00 };
-// merge prices.js (เธ–เนเธฒเธกเธต) โ€” เธเนเธฒเธก null เนเธซเนเนเธเน fallback
+// merge prices.js (ถ้ามี) — ข้าม null ให้ใช้ fallback
 const _lp = (typeof window!=="undefined")&&window.LATEST_PRICES;
 const INIT_PRICES = Object.fromEntries(Object.entries(_FALLBACK).map(([k,v])=>[k,(_lp?.stocks?.[k])??v]));
 const INIT_SET   = _lp?.set   ?? 1500.36;
 const INIT_SET50 = _lp?.set50 ?? 948.76;
 
-// โ”€โ”€ utils โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── utils ──────────────────────────────────────────
 const LS    = "port_v4";
 const load  = () => { try { const r=localStorage.getItem(LS); return r?JSON.parse(r):null; } catch { return null; } };
 const save  = d => { try { localStorage.setItem(LS,JSON.stringify(d)); } catch {} };
 const fmt   = (n,d=2) => (+(n)||0).toLocaleString("th-TH",{minimumFractionDigits:d,maximumFractionDigits:d});
-const fmtK  = n => Math.abs(n)>=1e6?`เธฟ${fmt(n/1e6)}M`:Math.abs(n)>=1e3?`เธฟ${fmt(n/1e3)}K`:`เธฟ${fmt(n)}`;
+const fmtK  = n => Math.abs(n)>=1e6?`฿${fmt(n/1e6)}M`:Math.abs(n)>=1e3?`฿${fmt(n/1e3)}K`:`฿${fmt(n)}`;
 const pct   = n => `${n>=0?"+":""}${fmt(n,2)}%`;
 const up    = n => n >= 0;
 const TODAY = () => new Date().toISOString().slice(0,10);
@@ -62,7 +62,7 @@ const MONTHS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","
 const fmtDate = dateStr => { const [y,m,d]=dateStr.split("-"); return `${parseInt(d)} ${MONTHS_EN[parseInt(m)-1]} ${y}`; };
 const COLORS= ["#6366f1","#f59e0b","#10b981","#f97316","#06b6d4","#e879f9","#3b82f6","#fb923c","#a3e635"];
 
-// เธญเธฑเธ•เธฃเธฒเธเนเธฒเธเธญเธกเธฏ online trading เนเธ•เนเธฅเธฐเนเธเธฃเธ (rate = %, min = เธฟ)
+// อัตราค่าคอมฯ online trading แต่ละโบรค (rate = %, min = ฿)
 const BROKER_RATES = {
   pi:   { rate:0.15, min:50,  label:"Pi"   },
   ksec: { rate:0.15, min:50,  label:"KSEC" },
@@ -77,7 +77,7 @@ const calcComm = (portId, gross, rateOverride, minOverride) => {
   return { comm, vat: comm * VAT };
 };
 
-// Cash เธ—เธตเนเนเธ—เนเธเธฃเธดเธ = INIT_PORTS.cash + delta เธเธฒเธ txList เธ—เธฑเนเธเธซเธกเธ” (never double-count)
+// Cash ที่แท้จริง = INIT_PORTS.cash + delta จาก txList ทั้งหมด (never double-count)
 const deriveCash = (portId, txList) => {
   const base = INIT_PORTS.find(p=>p.id===portId)?.cash ?? 0;
   return txList.reduce((c, tx) => {
@@ -89,13 +89,13 @@ const deriveCash = (portId, txList) => {
   }, base);
 };
 
-// โ”€โ”€ financial calcs โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── financial calcs ────────────────────────────────
 const calcFV       = h => (h.eps_3y&&h.pe_fair)?h.eps_3y*h.pe_fair:0;
 const calcWorstFV  = h => h.eps_worst?h.eps_worst*(h.pe_core||h.pe_fair):0;
 const calcUpside   = (p,fv)  => fv>0?((fv-p)/p*100):null;
 const calcDownside = (p,wfv) => wfv>0?((wfv-p)/p*100):null;
 
-// 3Y annualized CAGR: ((FairValue + divร—3) / price)^(1/3) โ€“ 1
+// 3Y annualized CAGR: ((FairValue + div×3) / price)^(1/3) – 1
 const calcAnnual3Y = (price, fv, div) => {
   if (!fv||!price||price<=0) return null;
   const terminal = fv + (div||0)*3;
@@ -111,18 +111,18 @@ const calcRR = (upside, downside) => {
 
 const getJudgement = rr => {
   if (rr==null) return null;
-  if (rr>7)  return { text:"เธเธทเนเธญ",    bg:"rgba(22,163,74,0.1)",   color:"#16a34a", border:"rgba(22,163,74,0.25)"  };
+  if (rr>7)  return { text:"ซื้อ",    bg:"rgba(22,163,74,0.1)",   color:"#16a34a", border:"rgba(22,163,74,0.25)"  };
   if (rr>=5) return { text:"Monitor", bg:"rgba(245,158,11,0.1)",  color:"#d97706", border:"rgba(245,158,11,0.25)" };
-  return           { text:"เธเนเธฒเธเธกเธฑเธ", bg:"rgba(148,163,184,0.1)", color:"#94a3b8", border:"rgba(148,163,184,0.25)"};
+  return           { text:"ช่างมัน", bg:"rgba(148,163,184,0.1)", color:"#94a3b8", border:"rgba(148,163,184,0.25)"};
 };
 
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// ═══════════════════════════════════════════════════
 //  SVG CHARTS (white-theme)
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// ═══════════════════════════════════════════════════
 function AreaChartSVG({ data, series, height=160 }) {
   if (!data||data.length<2) return (
     <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:"#cbd5e1",fontSize:12}}>
-      เธญเธฑเธเน€เธ”เธ• EOD เธซเธฅเธฒเธขเธงเธฑเธเน€เธเธทเนเธญเธ”เธนเธเธฃเธฒเธ trend
+      อัปเดต EOD หลายวันเพื่อดูกราฟ trend
     </div>
   );
   const W=760,H=height,pl=46,pr=8,pt=20,pb=24,iW=W-pl-pr,iH=H-pt-pb;
@@ -199,7 +199,7 @@ function BarChartSVG({ data, height=120 }) {
   );
 }
 
-// โ”€โ”€ EditCell โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── EditCell ───────────────────────────────────────
 function EditCell({ onSave, val, display, type="number", w=80 }) {
   const [editing,setEditing]=useState(false);
   const [v,setV]=useState(String(val).replace(/,/g,""));
@@ -209,52 +209,109 @@ function EditCell({ onSave, val, display, type="number", w=80 }) {
   return <input autoFocus type={type} value={v} style={IS} onChange={e=>setV(e.target.value)} onBlur={save} onKeyDown={e=>e.key==="Enter"&&save()}/>;
 }
 
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-//  SETUP WIZARD (first-run เธเธเธญเธธเธเธเธฃเธ“เนเนเธซเธกเน)
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// ═══════════════════════════════════════════════════
+//  SETUP WIZARD (first-run บนอุปกรณ์ใหม่)
+// ═══════════════════════════════════════════════════
 function SetupWizard() {
-  const [json, setJson] = React.useState('');
-  const [err,  setErr]  = React.useState('');
-  const save = () => {
-    try {
-      const d = JSON.parse(json);
-      if (!Array.isArray(d) || d.length === 0) throw new Error('เธ•เนเธญเธเน€เธเนเธ array เธเธญเธเธเธญเธฃเนเธ•');
-      localStorage.setItem('rc_init_ports', JSON.stringify(d));
-      window.location.reload();
-    } catch(e) { setErr(e.message); }
+  const TMPL = [
+    {id:"pi",   label:"Pi",   broker:"Pi",   color:"#6366f1"},
+    {id:"ksec", label:"KSEC", broker:"KSEC", color:"#f59e0b"},
+    {id:"bls",  label:"BLS",  broker:"BLS",  color:"#10b981"},
+  ];
+  const blank = () => ({symbol:"",shares:"",avgCost:""});
+  const [tab,  setTab]  = React.useState(0);
+  const [mode, setMode] = React.useState("form");
+  const [data, setData] = React.useState(TMPL.map(p=>({...p,cash:"0",holdings:[blank()]})));
+  const [json, setJson] = React.useState("");
+  const [err,  setErr]  = React.useState("");
+
+  const updH   = (pi,hi,f,v) => setData(d=>d.map((p,i)=>i===pi?{...p,holdings:p.holdings.map((h,j)=>j===hi?{...h,[f]:v}:h)}:p));
+  const addRow = pi => setData(d=>d.map((p,i)=>i===pi?{...p,holdings:[...p.holdings,blank()]}:p));
+  const delRow = (pi,hi) => setData(d=>d.map((p,i)=>i===pi?{...p,holdings:p.holdings.filter((_,j)=>j!==hi)}:p));
+  const updCash= (pi,v) => setData(d=>d.map((p,i)=>i===pi?{...p,cash:v}:p));
+
+  const saveForm = () => {
+    const ports = data.map(p=>({
+      id:p.id, label:p.label, broker:p.broker, color:p.color,
+      cash:parseFloat(p.cash)||0,
+      holdings:p.holdings.filter(h=>h.symbol.trim()).map(h=>({
+        symbol:h.symbol.trim().toUpperCase(), shares:parseInt(h.shares)||0,
+        avgCost:parseFloat(h.avgCost)||0, sector:"—",
+        pe_core:0, pe_fair:0, eps_worst:0, eps_3y:0, div:0, targetPct:0
+      }))
+    }));
+    if(ports.every(p=>p.holdings.length===0)){setErr("เพิ่มหุ้นอย่างน้อย 1 ตัว");return;}
+    localStorage.setItem('rc_init_ports',JSON.stringify(ports));
+    window.location.reload();
   };
+  const saveJson = () => {
+    try {
+      const d=JSON.parse(json);
+      if(!Array.isArray(d)||d.length===0) throw new Error("ต้องเป็น array");
+      localStorage.setItem('rc_init_ports',JSON.stringify(d));
+      window.location.reload();
+    } catch(e){setErr(e.message);}
+  };
+
+  const S = {
+    card:{background:'#fff',borderRadius:16,padding:'20px 16px',maxWidth:480,width:'100%',boxShadow:'0 2px 16px #0001'},
+    inp:{width:'100%',border:'1px solid #e2e8f0',borderRadius:7,padding:'7px 8px',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'},
+    btn:(c,full)=>({background:c,color:'#fff',border:'none',borderRadius:9,padding:full?'12px':'7px 12px',fontSize:full?15:13,fontWeight:700,cursor:'pointer',width:full?'100%':'auto'}),
+  };
+  const p = data[tab];
   return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f8fafc',padding:24,fontFamily:'sans-serif'}}>
-      <div style={{background:'#fff',borderRadius:16,padding:32,maxWidth:480,width:'100%',boxShadow:'0 4px 24px #0001'}}>
-        <div style={{fontSize:32,textAlign:'center',marginBottom:8}}>๐“</div>
-        <h2 style={{textAlign:'center',margin:'0 0 8px',color:'#1e293b'}}>เธ•เธฑเนเธเธเนเธฒ Portfolio</h2>
-        <p style={{color:'#64748b',fontSize:14,textAlign:'center',marginBottom:20}}>
-          เธงเธฒเธ Config JSON เธเธฒเธ PC<br/>
-          <small>(เธเธ”เธเธธเนเธก ๐“ค Export เธเธ PC เนเธฅเนเธง copy เธกเธฒเธงเธฒเธ)</small>
-        </p>
-        <textarea
-          value={json} onChange={e=>{setJson(e.target.value);setErr('');}}
-          placeholder='เธงเธฒเธ JSON เธ—เธตเนเธเธตเน...'
-          style={{width:'100%',height:160,borderRadius:8,border:'1px solid #e2e8f0',padding:12,fontSize:12,fontFamily:'monospace',resize:'vertical',boxSizing:'border-box'}}
-        />
-        {err && <p style={{color:'#dc2626',fontSize:13,margin:'8px 0'}}>{err}</p>}
-        <button onClick={save} style={{width:'100%',background:'#6366f1',color:'#fff',border:'none',borderRadius:10,padding:'12px',fontSize:16,fontWeight:700,cursor:'pointer',marginTop:12}}>
-          เธเธฑเธเธ—เธถเธเนเธฅเธฐเน€เธฃเธดเนเธกเนเธเนเธเธฒเธ
-        </button>
+    <div style={{minHeight:'100vh',background:'#f8fafc',padding:'16px 12px',fontFamily:'system-ui,sans-serif',display:'flex',justifyContent:'center',alignItems:'flex-start'}}>
+      <div style={S.card}>
+        <div style={{textAlign:'center',marginBottom:16}}>
+          <div style={{fontSize:26}}>📊</div>
+          <h2 style={{margin:'2px 0 12px',color:'#1e293b',fontSize:18}}>ตั้งค่า Portfolio</h2>
+          <div style={{display:'flex',gap:4}}>
+            {TMPL.map((t,i)=>(
+              <button key={t.id} onClick={()=>setTab(i)} style={{flex:1,background:tab===i?t.color:'#f1f5f9',color:tab===i?'#fff':'#64748b',border:'none',borderRadius:8,padding:'8px 0',fontSize:13,fontWeight:700,cursor:'pointer'}}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {mode==="form" ? (<>
+          <div style={{marginBottom:12}}>
+            <label style={{fontSize:11,color:'#64748b',fontWeight:700}}>เงินสด (฿)</label>
+            <input type="number" value={p.cash} onChange={e=>updCash(tab,e.target.value)} style={{...S.inp,marginTop:3}} placeholder="0"/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'2.2fr 1.8fr 1.8fr 28px',gap:4,marginBottom:4}}>
+            {['หุ้น','จำนวน','ต้นทุน/หุ้น',''].map((h,i)=><span key={i} style={{fontSize:11,color:'#94a3b8',fontWeight:700}}>{h}</span>)}
+          </div>
+          {p.holdings.map((h,hi)=>(
+            <div key={hi} style={{display:'grid',gridTemplateColumns:'2.2fr 1.8fr 1.8fr 28px',gap:4,marginBottom:5}}>
+              <input value={h.symbol} onChange={e=>updH(tab,hi,'symbol',e.target.value.toUpperCase())} style={S.inp} placeholder="ADVICE"/>
+              <input type="number" value={h.shares} onChange={e=>updH(tab,hi,'shares',e.target.value)} style={S.inp} placeholder="10000"/>
+              <input type="number" value={h.avgCost} onChange={e=>updH(tab,hi,'avgCost',e.target.value)} style={S.inp} placeholder="5.36"/>
+              <button onClick={()=>delRow(tab,hi)} style={{background:'none',border:'1px solid #fecaca',color:'#dc2626',borderRadius:6,fontSize:14,cursor:'pointer',padding:0}}>✕</button>
+            </div>
+          ))}
+          <button onClick={()=>addRow(tab)} style={{width:'100%',background:'none',border:'1px dashed #cbd5e1',borderRadius:8,padding:'7px',color:'#64748b',cursor:'pointer',fontSize:12,marginBottom:14}}>+ เพิ่มหุ้น</button>
+          {err&&<p style={{color:'#dc2626',fontSize:12,margin:'0 0 10px'}}>{err}</p>}
+          <button onClick={saveForm} style={S.btn('#6366f1',true)}>บันทึกและเริ่มใช้งาน</button>
+          <button onClick={()=>{setMode('json');setErr('');}} style={{width:'100%',background:'none',border:'none',color:'#94a3b8',fontSize:12,cursor:'pointer',marginTop:8,padding:4}}>หรือ วาง JSON จาก Export</button>
+        </>) : (<>
+          <textarea value={json} onChange={e=>{setJson(e.target.value);setErr('');}} placeholder="วาง JSON จากปุ่ม 📤 Export..." style={{...S.inp,height:160,resize:'vertical',fontFamily:'monospace',fontSize:11}}/>
+          {err&&<p style={{color:'#dc2626',fontSize:12,margin:'6px 0'}}>{err}</p>}
+          <button onClick={saveJson} style={{...S.btn('#6366f1',true),marginTop:8}}>บันทึกและเริ่มใช้งาน</button>
+          <button onClick={()=>{setMode('form');setErr('');}} style={{width:'100%',background:'none',border:'none',color:'#94a3b8',fontSize:12,cursor:'pointer',marginTop:8,padding:4}}>กรอกแบบฟอร์มแทน</button>
+        </>)}
       </div>
     </div>
   );
 }
 
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// ═══════════════════════════════════════════════════
 //  APP
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+// ═══════════════════════════════════════════════════
 function App() {
   const stored=load();
   const storedTxList = stored?.txList ?? [];
-  // first-run: เธ–เนเธฒเนเธกเนเธกเธตเธเธญเธฃเนเธ•เน€เธฅเธข โ’ เนเธซเน SetupWizard เธเธฑเธ”เธเธฒเธฃ
+  // first-run: ถ้าไม่มีพอร์ตเลย → ให้ SetupWizard จัดการ
   if (INIT_PORTS.length === 0 && (!stored?.ports || stored.ports.length === 0)) return <SetupWizard />;
-  // sync label/broker + เธเธณเธเธงเธ“ cash เธเธฒเธ txList เธ•เธฑเนเธเนเธ•เนเธ•เนเธ (เนเธกเนเน€เธเนเธ cash เนเธ localStorage)
+  // sync label/broker + คำนวณ cash จาก txList ตั้งแต่ต้น (ไม่เก็บ cash ใน localStorage)
   const initPorts = (stored?.ports ?? INIT_PORTS).map(p => {
     const init = INIT_PORTS.find(i=>i.id===p.id);
     return {...p, label:init?.label??p.label, broker:init?.broker??p.broker, cash:deriveCash(p.id, storedTxList)};
@@ -284,7 +341,7 @@ function App() {
   const [showAddFor,setShowAddFor]=useState(null);
   const fileRef=useRef();
 
-  // โ”€โ”€ computed โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // ── computed ────────────────────────────────────
   const activePorts=selPort==="all"?ports:ports.filter(p=>p.id===selPort);
 
   const consolidated=(()=>{
@@ -294,7 +351,7 @@ function App() {
       map[h.symbol].totalShares+=h.shares; map[h.symbol].totalCost+=h.shares*h.avgCost; map[h.symbol].portIds.push(port.id);
     }));
     return Object.values(map).map(h=>{
-      // fallback avgCost เธ–เนเธฒเนเธกเนเธกเธตเธฃเธฒเธเธฒ โ’ PnL = 0 (เนเธกเนเนเธซเนเนเธชเธ”เธ phantom loss); guard /0 เน€เธกเธทเนเธญเธเธฒเธขเธซเธกเธ”
+      // fallback avgCost ถ้าไม่มีราคา → PnL = 0 (ไม่ให้แสดง phantom loss); guard /0 เมื่อขายหมด
       const avg=h.totalShares>0?(h.totalCost/h.totalShares):0,cp=prices[h.symbol]??avg,fv=calcFV(h),wfv=calcWorstFV(h),mv=h.totalShares*cp;
       const upside=calcUpside(cp,fv),downside=calcDownside(cp,wfv);
       const rr=calcRR(upside,downside);
@@ -305,21 +362,21 @@ function App() {
   })();
 
   const totalCash=activePorts.reduce((a,p)=>a+p.cash,0),stocksMV=consolidated.reduce((a,h)=>a+h.marketValue,0),totalMV=stocksMV+totalCash,totalCost=consolidated.reduce((a,h)=>a+h.totalCost,0),totalPnL=consolidated.reduce((a,h)=>a+h.pnl,0),totalPnLPct=totalCost>0?(totalPnL/totalCost*100):0;
-  const totalPortValue=totalMV; // เนเธเนเนเธ holdings tab เธชเธณเธซเธฃเธฑเธเธเธณเธเธงเธ“ target value
-  // pnlPct: เธเธดเธ”เธเธฒเธ stock_cost+cash (total capital deployed)
+  const totalPortValue=totalMV; // ใช้ใน holdings tab สำหรับคำนวณ target value
+  // pnlPct: คิดจาก stock_cost+cash (total capital deployed)
   const portSums=ports.map(p=>{ const mv=p.holdings.reduce((a,h)=>a+h.shares*(prices[h.symbol]??h.avgCost),0)+p.cash,c=p.holdings.reduce((a,h)=>a+h.shares*h.avgCost,0),pnl=p.holdings.reduce((a,h)=>a+h.shares*((prices[h.symbol]??h.avgCost)-h.avgCost),0),totalCapital=c+p.cash; return{...p,mv,cost:c,pnl,pnlPct:totalCapital>0?(pnl/totalCapital*100):0}; });
-  // เธเธฃเธญเธเธงเธฑเธเธซเธขเธธเธ”เธชเธธเธ”เธชเธฑเธเธ”เธฒเธซเนเธญเธญเธ (เธ•เธฅเธฒเธ”เธซเธธเนเธเธเธดเธ” เน€เธชเธฒเธฃเน=6, เธญเธฒเธ—เธดเธ•เธขเน=0)
+  // กรองวันหยุดสุดสัปดาห์ออก (ตลาดหุ้นปิด เสาร์=6, อาทิตย์=0)
   const isWeekday=str=>{ const [y,m,d]=str.split("-").map(Number); return new Date(y,m-1,d).getDay()%6!==0; };
   const perfData=hist.filter(snap=>isWeekday(snap.date)).map(snap=>{ let mv=0; ports.forEach(p=>{ p.holdings.forEach(h=>{ mv+=h.shares*(snap.prices[h.symbol]??h.avgCost); }); mv+=p.cash; }); const h0=hist[0]; let mv0=0; ports.forEach(p=>{ p.holdings.forEach(h=>{ mv0+=h.shares*(h0.prices[h.symbol]??h.avgCost); }); mv0+=p.cash; }); return{date:fmtDate(snap.date),port:mv0>0?((mv-mv0)/mv0*100):0,set:((snap.set-h0.set)/h0.set*100),set50:((snap.set50-h0.set50)/h0.set50*100)}; });
 
-  // โ”€โ”€ stale-data indicator โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // ── stale-data indicator ────────────────────────
   const staleDays=(()=>{ const d=Math.round((new Date(TODAY())-new Date(lastUpd))/(864e5)); return d; })();
 
-  // โ”€โ”€ live fetch + auto-save EOD โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // ── live fetch + auto-save EOD ──────────────────
   const fetchLivePrices = async (silent=false) => {
-    if(!silent){ setFetchSt("fetching"); setStatusMsg("เธเธณเธฅเธฑเธเธ”เธถเธเธฃเธฒเธเธฒโ€ฆ"); }
+    if(!silent){ setFetchSt("fetching"); setStatusMsg("กำลังดึงราคา…"); }
     try {
-      // เธ”เธถเธเธฃเธฒเธเธฒเธเธฒเธ Yahoo Finance เนเธ”เธขเธ•เธฃเธ (เนเธกเนเธ•เนเธญเธเธเธฒเธฃ backend)
+      // ดึงราคาจาก Yahoo Finance โดยตรง (ไม่ต้องการ backend)
       const extraSymsList = watchList.map(w=>w.symbol).filter(Boolean);
       const coreNames = ['ADVICE','DOHOME','PR9','WASH','SGC','SGC-W2','CHAYO','JMART','JMT'];
       const allNames  = [...new Set([...coreNames, ...extraSymsList])];
@@ -331,7 +388,7 @@ function App() {
       if(!res.ok) throw new Error(`yahoo error ${res.status}`);
       const json = await res.json();
       const results = json?.quoteResponse?.result ?? [];
-      // เนเธเธฅเธเน€เธเนเธ format เน€เธ”เธดเธก
+      // แปลงเป็น format เดิม
       const data = {'_date': new Date().toISOString().slice(0,10)};
       results.forEach(q => {
         const p = q.regularMarketPrice;
@@ -349,26 +406,26 @@ function App() {
         else if(sym==="_SET50_PE") ns50PE=price;
         else { np[sym]=price; cnt++; }
       });
-      if(cnt===0) throw new Error("เนเธกเนเธกเธตเธฃเธฒเธเธฒ โ€” เธ•เธฅเธฒเธ”เธญเธฒเธเธเธดเธ”");
+      if(cnt===0) throw new Error("ไม่มีราคา — ตลาดอาจปิด");
       const d=TODAY();
       setPrices(np); setSetP(ns); setSet50P(ns50); setSetPE(nsPE); setSet50PE(ns50PE);
       setHist(prev=>[...prev.filter(x=>x.date!==d),{date:d,prices:{...np},set:ns,set50:ns50}].sort((a,b)=>a.date.localeCompare(b.date)));
       setLastUpd(d);
-      setFetchSt("success"); setStatusMsg(`โ… เธญเธฑเธเน€เธ”เธ• ${cnt} เธซเธธเนเธ ยท เธเธฑเธเธ—เธถเธ EOD เนเธฅเนเธง`);
+      setFetchSt("success"); setStatusMsg(`✅ อัปเดต ${cnt} หุ้น · บันทึก EOD แล้ว`);
       setTimeout(()=>{ setFetchSt("idle"); setStatusMsg(""); },5000);
     } catch(e) {
       setFetchSt("error");
-      if(!silent){ setStatusMsg(`โ ${e.message}`); setTimeout(()=>{ setFetchSt("idle"); setStatusMsg(""); },6000); }
+      if(!silent){ setStatusMsg(`❌ ${e.message}`); setTimeout(()=>{ setFetchSt("idle"); setStatusMsg(""); },6000); }
       else setFetchSt("idle");
     }
   };
 
-  // โ”€โ”€ sync cash เธเธฒเธ txList เธ—เธธเธเธเธฃเธฑเนเธเธ—เธตเน txList เน€เธเธฅเธตเนเธขเธ โ”€โ”€โ”€โ”€
+  // ── sync cash จาก txList ทุกครั้งที่ txList เปลี่ยน ────
   useEffect(()=>{
     setPorts(prev => prev.map(p => ({...p, cash: deriveCash(p.id, txList)})));
   }, [txList]);
 
-  // โ”€โ”€ auto-fetch on mount if stale โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // ── auto-fetch on mount if stale ────────────────
   useEffect(()=>{
     const el=document.getElementById("app-loader"); if(el)el.style.display="none";
     const now=new Date();
@@ -381,7 +438,7 @@ function App() {
 
   const saveEOD=()=>{ const np={}; Object.entries(editP).forEach(([k,v])=>{np[k]=parseFloat(v)||0;}); const ns=parseFloat(eSet)||setP,ns50=parseFloat(eSet50)||set50P; setPrices(np);setSetP(ns);setSet50P(ns50); const d=TODAY(); setHist(prev=>[...prev.filter(x=>x.date!==d),{date:d,prices:{...np},set:ns,set50:ns50}].sort((a,b)=>a.date.localeCompare(b.date))); setLastUpd(d);setModal(null); };
   const addTx=()=>{
-    // cash เธ–เธนเธ derive เธญเธฑเธ•เนเธเธกเธฑเธ•เธดเธเธฒเธ txList เธเนเธฒเธ useEffect โ€” เนเธกเนเธ•เนเธญเธ setPorts cash เน€เธญเธ
+    // cash ถูก derive อัตโนมัติจาก txList ผ่าน useEffect — ไม่ต้อง setPorts cash เอง
     if(txForm.mode==="cash"){
       if(!txForm.amount)return;
       const amt=parseFloat(txForm.amount), txDate=txForm.date||TODAY();
@@ -402,7 +459,7 @@ function App() {
       setTxList(prev=>prev.map(t=>t.id===txForm._editId?{...t,symbol:txForm.symbol,shares:sh,price:pr,amount:gross,comm,vat,netTotal,date:txDate,commRate:txForm.commRate,commMin:txForm.commMin,type:txForm.type}:t));
     } else {
       setTxList(prev=>[{...txForm,shares:sh,price:pr,amount:gross,comm,vat,netTotal,date:txDate,id:Date.now()},...prev]);
-      // เธญเธฑเธเน€เธ”เธ•เน€เธเธเธฒเธฐ holdings (cash เธญเธฑเธเน€เธ”เธ•เธเนเธฒเธ useEffect)
+      // อัปเดตเฉพาะ holdings (cash อัปเดตผ่าน useEffect)
       setPorts(prev=>prev.map(port=>{
         if(port.id!==txForm.portId)return port;
         if(txForm.type==="SELL")
@@ -416,24 +473,24 @@ function App() {
     }
     setTxForm(f=>({...f,shares:"",price:"",symbol:"",_editId:null}));
   };
-  const deleteTx=id=>{ if(!confirm("เธฅเธเธฃเธฒเธขเธเธฒเธฃเธเธตเน?"))return; setTxList(prev=>prev.filter(t=>t.id!==id)); };
+  const deleteTx=id=>{ if(!confirm("ลบรายการนี้?"))return; setTxList(prev=>prev.filter(t=>t.id!==id)); };
   const openEditTx=tx=>{ const br=BROKER_RATES[tx.portId]||{rate:0.15,min:50}; setTxForm({portId:tx.portId,mode:tx.mode||"stock",type:tx.type,symbol:tx.symbol||"",shares:tx.shares||"",price:tx.price||"",amount:tx.amount||"",note:tx.note||"",date:tx.date||TODAY(),commRate:tx.commRate||String(br.rate),commMin:tx.commMin||String(br.min),_editId:tx.id}); setModal("tx"); };
   const applyEdit=(portId,symbol,field,val)=>setPorts(prev=>prev.map(p=>p.id!==portId?p:{...p,holdings:p.holdings.map(h=>h.symbol!==symbol?h:{...h,[field]:parseFloat(val)||val})}));
-  // update field across ALL ports (เนเธเนเนเธ consolidated view)
+  // update field across ALL ports (ใช้ใน consolidated view)
   const applyEditAll=(symbol,field,val)=>setPorts(prev=>prev.map(p=>({...p,holdings:p.holdings.map(h=>h.symbol!==symbol?h:{...h,[field]:parseFloat(val)||val})})));
   const updateCash=(portId,val)=>setPorts(prev=>prev.map(p=>p.id!==portId?p:{...p,cash:parseFloat(val)||0}));
-  const removeHolding=(portId,symbol)=>{ if(!confirm(`เธฅเธ ${symbol} เธญเธญเธเธเธฒเธเธเธญเธฃเนเธ•?`))return; setPorts(prev=>prev.map(p=>p.id!==portId?p:{...p,holdings:p.holdings.filter(h=>h.symbol!==symbol)})); };
+  const removeHolding=(portId,symbol)=>{ if(!confirm(`ลบ ${symbol} ออกจากพอร์ต?`))return; setPorts(prev=>prev.map(p=>p.id!==portId?p:{...p,holdings:p.holdings.filter(h=>h.symbol!==symbol)})); };
   const addHolding=(portId)=>{ if(!addForm.symbol||!addForm.shares||!addForm.avgCost)return; const sh=parseFloat(addForm.shares),av=parseFloat(addForm.avgCost),sym=addForm.symbol.toUpperCase(); setPorts(prev=>prev.map(p=>{ if(p.id!==portId)return p; const ex=p.holdings.find(h=>h.symbol===sym); if(ex)return{...p,holdings:p.holdings.map(h=>h.symbol!==sym?h:{...h,shares:sh,avgCost:av})}; return{...p,holdings:[...p.holdings,{symbol:sym,shares:sh,avgCost:av,sector:"Other",pe_core:8,pe_fair:10,eps_worst:0,eps_3y:0,div:0,targetPct:0.05}]}; })); setAddForm({symbol:"",shares:"",avgCost:""}); setShowAddFor(null); };
-  const handleCSV=e=>{ const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{try{const lines=ev.target.result.split("\n").filter(l=>l.trim()),hds=lines[0].split(",").map(h=>h.trim().toLowerCase());let upd=0;lines.slice(1).forEach(line=>{const cols=line.split(",").map(c=>c.trim()),row={};hds.forEach((h,i)=>{row[h]=cols[i];});const sym=(row["symbol"]||row["เธซเธธเนเธ"]||"").toUpperCase(),pr=parseFloat(row["price"]||row["เธฃเธฒเธเธฒ"]||0);if(sym&&pr>0){setPrices(prev=>({...prev,[sym]:pr}));upd++;}});setStatusMsg(`โ… CSV: เธญเธฑเธเน€เธ”เธ• ${upd} เธซเธธเนเธ`);setTimeout(()=>setStatusMsg(""),4000);setModal(null);}catch{setStatusMsg("โ CSV format เธเธดเธ”");}};r.readAsText(file);e.target.value=""; };
+  const handleCSV=e=>{ const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{try{const lines=ev.target.result.split("\n").filter(l=>l.trim()),hds=lines[0].split(",").map(h=>h.trim().toLowerCase());let upd=0;lines.slice(1).forEach(line=>{const cols=line.split(",").map(c=>c.trim()),row={};hds.forEach((h,i)=>{row[h]=cols[i];});const sym=(row["symbol"]||row["หุ้น"]||"").toUpperCase(),pr=parseFloat(row["price"]||row["ราคา"]||0);if(sym&&pr>0){setPrices(prev=>({...prev,[sym]:pr}));upd++;}});setStatusMsg(`✅ CSV: อัปเดต ${upd} หุ้น`);setTimeout(()=>setStatusMsg(""),4000);setModal(null);}catch{setStatusMsg("❌ CSV format ผิด");}};r.readAsText(file);e.target.value=""; };
 
-  // โ”€โ”€ theme โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // ── theme ──────────────────────────────────────
   const C={bg:"#f8fafc",card:"#ffffff",border:"#e2e8f0",muted:"#94a3b8",text:"#1e293b",sub:"#64748b",up:"#16a34a",dn:"#dc2626"};
   const shadow="0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04)";
   const card={background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px",boxShadow:shadow};
   const inp={background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,padding:"8px 12px",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",width:"100%"};
   const btn=bg=>({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:12,fontFamily:"inherit",transition:"opacity .15s"});
 
-  const TABS=[["overview","เธ เธฒเธเธฃเธงเธก"],["holdings","Stock"],["analysis","เธงเธดเน€เธเธฃเธฒเธฐเธซเน"],["manage","เธเธฑเธ”เธเธฒเธฃเธเธญเธฃเนเธ•"],["transactions","เธฃเธฒเธขเธเธฒเธฃ"]];
+  const TABS=[["overview","ภาพรวม"],["holdings","Stock"],["analysis","วิเคราะห์"],["manage","จัดการพอร์ต"],["transactions","รายการ"]];
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans','Noto Sans Thai',sans-serif"}}>
@@ -451,35 +508,35 @@ function App() {
         tbody tr{transition:background .1s}
       `}</style>
 
-      {/* โ”€โ”€ TOPBAR โ”€โ”€ */}
+      {/* ── TOPBAR ── */}
       <div style={{background:"#fff",borderBottom:`1px solid ${C.border}`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,boxShadow:"0 1px 3px rgba(0,0,0,0.05)"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>๐“</div>
+          <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>📊</div>
           <div>
             <div style={{fontWeight:800,fontSize:14,letterSpacing:-.3,color:C.text}}>REDCODE PORTFOLIO</div>
             <div style={{fontSize:10,color:C.muted,display:"flex",gap:8,alignItems:"center"}}>
-              <span>SET {fmt(setP)}</span><span>ยท</span><span>SET50 {fmt(set50P)}</span><span>ยท</span>
+              <span>SET {fmt(setP)}</span><span>·</span><span>SET50 {fmt(set50P)}</span><span>·</span>
               <span style={{color:staleDays>0?"#f59e0b":C.muted}}>
-                {staleDays>0?`โ ๏ธ เธเนเธญเธกเธนเธฅเธฅเนเธฒเธชเธกเธฑเธข ${staleDays} เธงเธฑเธ`:lastUpd}
+                {staleDays>0?`⚠️ ข้อมูลล้าสมัย ${staleDays} วัน`:lastUpd}
               </span>
             </div>
           </div>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          {statusMsg&&<span style={{fontSize:11,color:statusMsg.startsWith("โ")?"#dc2626":"#16a34a",fontWeight:500}}>{statusMsg}</span>}
+          {statusMsg&&<span style={{fontSize:11,color:statusMsg.startsWith("❌")?"#dc2626":"#16a34a",fontWeight:500}}>{statusMsg}</span>}
           <button onClick={()=>fetchLivePrices(false)} disabled={fetchSt==="fetching"}
             style={{...btn(fetchSt==="success"?"#16a34a":fetchSt==="error"?"#dc2626":"#6366f1"),opacity:fetchSt==="fetching"?.6:1}}>
-            {fetchSt==="fetching"?"โณ เธเธณเธฅเธฑเธเธ”เธถเธโ€ฆ":fetchSt==="success"?"โ… เธญเธฑเธเน€เธ”เธ•เนเธฅเนเธง":fetchSt==="error"?"โ เธฅเธญเธเนเธซเธกเน":"๐” Live Price"}
+            {fetchSt==="fetching"?"⏳ กำลังดึง…":fetchSt==="success"?"✅ อัปเดตแล้ว":fetchSt==="error"?"❌ ลองใหม่":"🔄 Live Price"}
           </button>
-          <button onClick={()=>fileRef.current?.click()} style={{...btn("#64748b")}}>๐“ CSV</button>
+          <button onClick={()=>fileRef.current?.click()} style={{...btn("#64748b")}}>📂 CSV</button>
 <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={handleCSV}/>
-          <button onClick={()=>{navigator.clipboard.writeText(localStorage.getItem('rc_init_ports')||'');setStatusMsg('โ… เธเธฑเธ”เธฅเธญเธ Config เนเธฅเนเธง โ€” เธงเธฒเธเธเธเธกเธทเธญเธ–เธทเธญเนเธ Setup Wizard');setTimeout(()=>setStatusMsg(''),4000);}} style={{...btn("#8b5cf6")}}>๐“ค Export</button>
-          <button onClick={()=>setModal("tx")} style={{...btn("#0ea5e9")}}>+ เธฃเธฒเธขเธเธฒเธฃ</button>
-          <button onClick={()=>{setEditP({...prices});setESet(setP);setESet50(set50P);setModal("eod");}} style={{...btn("#10b981")}}>๐“ฅ EOD Manual</button>
+          <button onClick={()=>{navigator.clipboard.writeText(localStorage.getItem('rc_init_ports')||'');setStatusMsg('✅ คัดลอก Config แล้ว — วางบนมือถือใน Setup Wizard');setTimeout(()=>setStatusMsg(''),4000);}} style={{...btn("#8b5cf6")}}>📤 Export</button>
+          <button onClick={()=>setModal("tx")} style={{...btn("#0ea5e9")}}>+ รายการ</button>
+          <button onClick={()=>{setEditP({...prices});setESet(setP);setESet50(set50P);setModal("eod");}} style={{...btn("#10b981")}}>📥 EOD Manual</button>
         </div>
       </div>
 
-      {/* โ”€โ”€ TAB BAR โ”€โ”€ */}
+      {/* ── TAB BAR ── */}
       <div style={{background:"#fff",borderBottom:`1px solid ${C.border}`,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"flex-end"}}>
         <div style={{display:"flex",gap:2,background:"#f1f5f9",borderRadius:10,padding:3}}>
           {TABS.map(([id,lbl])=>(
@@ -490,15 +547,15 @@ function App() {
 
       <div style={{padding:"20px",animation:"fadeUp .25s ease",maxWidth:1600,margin:"0 auto"}}>
 
-        {/* โ•โ• OVERVIEW โ•โ• */}
+        {/* ══ OVERVIEW ══ */}
         {tab==="overview"&&<>
           {/* KPIs */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:16}}>
             {[
-              {lbl:"เธกเธนเธฅเธเนเธฒเธเธญเธฃเนเธ•เธฃเธงเธก",val:fmtK(totalMV),sub:`เธ•เนเธเธ—เธธเธ ${fmtK(totalCost)}`,acc:"#6366f1",icon:"๐’ผ"},
-              {lbl:"เธเธณเนเธฃ/เธเธฒเธ”เธ—เธธเธ",val:`${up(totalPnL)?"+":""}${fmtK(Math.abs(totalPnL))}`,sub:pct(totalPnLPct),acc:up(totalPnL)?"#16a34a":"#dc2626",clr:up(totalPnL)?"#16a34a":"#dc2626",icon:up(totalPnL)?"๐“":"๐“"},
-              {lbl:"เน€เธเธดเธเธชเธ”",val:fmtK(totalCash),sub:`${fmt(totalCash>0?(totalCash/totalMV*100):0,1)}% of port`,acc:"#0ea5e9",icon:"๐’ต"},
-              {lbl:"SET Index",val:fmt(setP),sub:`SET50: ${fmt(set50P)}`,acc:"#f59e0b",icon:"๐“",setPE,set50PE},
+              {lbl:"มูลค่าพอร์ตรวม",val:fmtK(totalMV),sub:`ต้นทุน ${fmtK(totalCost)}`,acc:"#6366f1",icon:"💼"},
+              {lbl:"กำไร/ขาดทุน",val:`${up(totalPnL)?"+":""}${fmtK(Math.abs(totalPnL))}`,sub:pct(totalPnLPct),acc:up(totalPnL)?"#16a34a":"#dc2626",clr:up(totalPnL)?"#16a34a":"#dc2626",icon:up(totalPnL)?"📈":"📉"},
+              {lbl:"เงินสด",val:fmtK(totalCash),sub:`${fmt(totalCash>0?(totalCash/totalMV*100):0,1)}% of port`,acc:"#0ea5e9",icon:"💵"},
+              {lbl:"SET Index",val:fmt(setP),sub:`SET50: ${fmt(set50P)}`,acc:"#f59e0b",icon:"📊",setPE,set50PE},
             ].map(k=>(
               <div key={k.lbl} style={{...card,borderTop:`3px solid ${k.acc}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
@@ -508,9 +565,9 @@ function App() {
                 <div style={{fontSize:20,fontWeight:800,fontFamily:"'DM Mono',monospace",color:k.clr||C.text,lineHeight:1}}>{k.val}</div>
                 {k.sub&&<div style={{fontSize:10,color:k.clr||C.muted,marginTop:5,fontFamily:"'DM Mono',monospace"}}>{k.sub}</div>}
                 {k.setPE!=null&&<div style={{fontSize:10,color:C.muted,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
-                  P/E SET: <span style={{color:C.text,fontWeight:600}}>{k.setPE>0?`${fmt(k.setPE,1)}x`:"โ€”"}</span>
-                  <span style={{margin:"0 4px"}}>ยท</span>
-                  SET50: <span style={{color:C.text,fontWeight:600}}>{k.set50PE>0?`${fmt(k.set50PE,1)}x`:"โ€”"}</span>
+                  P/E SET: <span style={{color:C.text,fontWeight:600}}>{k.setPE>0?`${fmt(k.setPE,1)}x`:"—"}</span>
+                  <span style={{margin:"0 4px"}}>·</span>
+                  SET50: <span style={{color:C.text,fontWeight:600}}>{k.set50PE>0?`${fmt(k.set50PE,1)}x`:"—"}</span>
                 </div>}
               </div>
             ))}
@@ -522,12 +579,12 @@ function App() {
               <div key={p.id} onClick={()=>setSelPort(p.id===selPort?"all":p.id)} style={{...card,borderLeft:`4px solid ${p.color}`,cursor:"pointer"}} className="rh">
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                   <div style={{fontSize:10,fontWeight:700,color:p.color,textTransform:"uppercase"}}>{p.label}</div>
-                  <div style={{fontSize:10,color:C.muted}}>{p.holdings.length} เธซเธธเนเธ</div>
+                  <div style={{fontSize:10,color:C.muted}}>{p.holdings.length} หุ้น</div>
                 </div>
                 <div style={{fontFamily:"'DM Mono',monospace",fontSize:17,fontWeight:800,color:C.text}}>{fmtK(p.mv)}</div>
                 <div style={{display:"flex",justifyContent:"space-between",marginTop:6,alignItems:"center"}}>
                   <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:up(p.pnl)?C.up:C.dn}}>
-                    {up(p.pnl)?"+":""}เธฟ{fmt(Math.abs(p.pnl))} ({pct(p.pnlPct)})
+                    {up(p.pnl)?"+":""}฿{fmt(Math.abs(p.pnl))} ({pct(p.pnlPct)})
                   </div>
                 </div>
                 <div style={{fontSize:10,color:C.muted,marginTop:4}}>Cash: {fmtK(p.cash)}</div>
@@ -535,9 +592,9 @@ function App() {
             ))}
           </div>
 
-          {/* Signal chips โ€” เนเธชเธ”เธเน€เธเธเธฒเธฐ TOTAL Port */}
+          {/* Signal chips — แสดงเฉพาะ TOTAL Port */}
           {selPort==="all"&&<div style={{...card,marginBottom:16}}>
-            <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>เธชเธฑเธเธเธฒเธ“ Investment</div>
+            <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>สัญญาณ Investment</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {consolidated.map(h=>{ const j=h.judgement; if(!j)return null; return (
                 <div key={h.symbol} style={{display:"flex",alignItems:"center",gap:6,background:j.bg,border:`1px solid ${j.border}`,borderRadius:20,padding:"4px 12px"}}>
@@ -546,14 +603,14 @@ function App() {
                   {h.rr!=null&&<span style={{fontSize:10,color:C.muted,fontFamily:"'DM Mono',monospace"}}>{fmt(h.rr,1)}x</span>}
                 </div>
               ); })}
-              {consolidated.filter(h=>h.judgement).length===0&&<span style={{color:C.muted,fontSize:12}}>เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเน€เธเธตเธขเธเธเธญเธชเธณเธซเธฃเธฑเธ EPS/PE</span>}
+              {consolidated.filter(h=>h.judgement).length===0&&<span style={{color:C.muted,fontSize:12}}>ไม่มีข้อมูลเพียงพอสำหรับ EPS/PE</span>}
             </div>
           </div>}
 
           {/* Charts */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 240px",gap:12,marginBottom:12}}>
             <div style={card}>
-              <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>เธเธฅเธ•เธญเธเนเธ—เธเน€เธ—เธตเธขเธ SET & SET50 (%)</div>
+              <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>ผลตอบแทนเทียบ SET & SET50 (%)</div>
               <AreaChartSVG data={perfData} height={170} series={[
                 {key:"port",  name:"Port",  stroke:"#6366f1", fill:true, sw:2.5},
                 {key:"set",   name:"SET",   stroke:"#f59e0b", sw:1.5, dash:"5 3"},
@@ -561,7 +618,7 @@ function App() {
               ]}/>
             </div>
             <div style={card}>
-              <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:"uppercase",letterSpacing:.8}}>เธเนเธณเธซเธเธฑเธเธเธญเธฃเนเธ•</div>
+              <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:"uppercase",letterSpacing:.8}}>น้ำหนักพอร์ต</div>
               <div style={{display:"flex",justifyContent:"center",margin:"4px 0 10px"}}>
                 <PieChartSVG data={[...consolidated].sort((a,b)=>b.marketValue-a.marketValue).map(h=>({name:h.symbol,value:h.marketValue}))} size={110} innerR={30} outerR={50}/>
               </div>
@@ -578,23 +635,23 @@ function App() {
           </div>
 
           <div style={card}>
-            <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:"uppercase",letterSpacing:.8}}>เธเธณเนเธฃ/เธเธฒเธ”เธ—เธธเธเธฃเธฒเธขเธซเธธเนเธ (เธฟ)</div>
+            <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:"uppercase",letterSpacing:.8}}>กำไร/ขาดทุนรายหุ้น (฿)</div>
             <BarChartSVG data={[...consolidated].sort((a,b)=>(b.marketValue||0)-(a.marketValue||0)).map(h=>({name:h.symbol,pnl:h.pnl}))} height={120}/>
           </div>
         </>}
 
-        {/* โ•โ• HOLDINGS โ•โ• */}
+        {/* ══ HOLDINGS ══ */}
         {tab==="holdings"&&<>
-          {/* โ”€โ”€ Active Portfolio header โ”€โ”€ */}
+          {/* ── Active Portfolio header ── */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
             <div style={{fontWeight:800,fontSize:16,color:C.text}}>Active Portfolio</div>
-            <div style={{fontSize:11,color:C.muted}}>๐’ก เนเธเนเนเธเธเนเธฒ EPS / PE / Div เนเธ”เนเธ—เธตเน Tab เธงเธดเน€เธเธฃเธฒเธฐเธซเน</div>
+            <div style={{fontSize:11,color:C.muted}}>💡 แก้ไขค่า EPS / PE / Div ได้ที่ Tab วิเคราะห์</div>
           </div>
           <div style={{...card,padding:0,overflowX:"auto",marginBottom:24}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead>
                 <tr style={{color:C.muted,textTransform:"uppercase",letterSpacing:.5,fontSize:10,borderBottom:`2px solid ${C.border}`}}>
-                  {["เธซเธธเนเธ","Port","เธฃเธฒเธเธฒ","EPS W","EPS 3Y","PE Core","PE Fair","Worst FV","Fair FV","Div","Downside","CAGR 3Y*","Upside 3Y","R/R","Judgement","เธเธฑเธเธเธธเธเธฑเธ","เธชเธฑเธ”เธชเนเธงเธ"].map((h,i)=>(
+                  {["หุ้น","Port","ราคา","EPS W","EPS 3Y","PE Core","PE Fair","Worst FV","Fair FV","Div","Downside","CAGR 3Y*","Upside 3Y","R/R","Judgement","ปัจจุบัน","สัดส่วน"].map((h,i)=>(
                     <th key={h} style={{textAlign:i<2?"left":"right",padding:"10px 8px",fontWeight:600,color:C.muted,minWidth:i<2?80:64}}>{h}</th>
                   ))}
                 </tr>
@@ -602,7 +659,7 @@ function App() {
               <tbody>
                 {ports.map(p=>(
                   <tr key={p.id+"_c"} style={{borderBottom:`1px solid ${C.border}`,background:"#fafbff"}}>
-                    <td style={{padding:"8px 10px",color:C.muted,fontSize:11}}>๐’ฐ Cash {p.broker}</td>
+                    <td style={{padding:"8px 10px",color:C.muted,fontSize:11}}>💰 Cash {p.broker}</td>
                     <td style={{padding:"8px 8px"}}><span style={{background:`${p.color}18`,color:p.color,borderRadius:4,padding:"2px 6px",fontSize:10,fontWeight:700}}>{p.broker}</span></td>
                     <td colSpan={13}/>
                     <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmtK(p.cash)}</td>
@@ -610,7 +667,7 @@ function App() {
                   </tr>
                 ))}
                 {(()=>{
-                  // โ”€โ”€ helper: render one Stock row (read-only EPS/PE, เนเธกเนเธกเธต target/diff) โ”€โ”€
+                  // ── helper: render one Stock row (read-only EPS/PE, ไม่มี target/diff) ──
                   const HRow=({rowKey,sym,cp,fv,wfv,mv,upside,dn,ann3y,rr,jdg,h,portBadges,ap})=>(
                     <tr key={rowKey} className="rh" style={{borderBottom:`1px solid ${C.border}`}}>
                       <td style={{padding:"8px 10px",fontWeight:700,fontSize:12,color:C.text}}>{sym}</td>
@@ -622,15 +679,15 @@ function App() {
                       <td style={{textAlign:"right",padding:"8px 8px",color:C.sub,fontFamily:"'DM Mono',monospace"}}>{fmt(h.eps_3y,3)}</td>
                       <td style={{textAlign:"right",padding:"8px 8px",color:C.sub,fontFamily:"'DM Mono',monospace"}}>{fmt(h.pe_core,0)}</td>
                       <td style={{textAlign:"right",padding:"8px 8px",color:C.sub,fontFamily:"'DM Mono',monospace"}}>{fmt(h.pe_fair,0)}</td>
-                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",color:wfv>0?(wfv>cp?C.up:C.dn):C.muted,fontWeight:wfv>0?600:400}}>{wfv>0?fmt(wfv):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",color:fv>0?(fv>cp?C.up:C.dn):C.muted,fontWeight:fv>0?600:400}}>{fv>0?fmt(fv):"โ€”"}</td>
+                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",color:wfv>0?(wfv>cp?C.up:C.dn):C.muted,fontWeight:wfv>0?600:400}}>{wfv>0?fmt(wfv):"—"}</td>
+                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",color:fv>0?(fv>cp?C.up:C.dn):C.muted,fontWeight:fv>0?600:400}}>{fv>0?fmt(fv):"—"}</td>
                       <td style={{textAlign:"right",padding:"8px 8px",color:C.sub,fontFamily:"'DM Mono',monospace"}}>{fmt(h.div,2)}</td>
-                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:dn!=null?(up(dn)?C.up:C.dn):C.muted}}>{dn!=null?pct(dn):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:ann3y!=null?(up(ann3y)?C.up:C.dn):C.muted}}>{ann3y!=null?pct(ann3y):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:upside!=null?(up(upside)?C.up:C.dn):C.muted}}>{upside!=null?pct(upside):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:rr!=null?(rr>7?C.up:rr>=5?"#d97706":C.muted):C.muted}}>{rr!=null?`${fmt(rr,1)}x`:"โ€”"}</td>
+                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:dn!=null?(up(dn)?C.up:C.dn):C.muted}}>{dn!=null?pct(dn):"—"}</td>
+                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:ann3y!=null?(up(ann3y)?C.up:C.dn):C.muted}}>{ann3y!=null?pct(ann3y):"—"}</td>
+                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:upside!=null?(up(upside)?C.up:C.dn):C.muted}}>{upside!=null?pct(upside):"—"}</td>
+                      <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:rr!=null?(rr>7?C.up:rr>=5?"#d97706":C.muted):C.muted}}>{rr!=null?`${fmt(rr,1)}x`:"—"}</td>
                       <td style={{textAlign:"right",padding:"8px 8px"}}>
-                        {jdg?<span style={{background:jdg.bg,color:jdg.color,border:`1px solid ${jdg.border}`,borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{jdg.text}</span>:<span style={{color:C.muted}}>โ€”</span>}
+                        {jdg?<span style={{background:jdg.bg,color:jdg.color,border:`1px solid ${jdg.border}`,borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{jdg.text}</span>:<span style={{color:C.muted}}>—</span>}
                       </td>
                       <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmtK(mv)}</td>
                       <td style={{textAlign:"right",padding:"8px 8px",fontFamily:"'DM Mono',monospace",color:C.muted}}>{fmt(ap,1)}%</td>
@@ -638,7 +695,7 @@ function App() {
                   );
 
                   if(selPort==="all"){
-                    // โ”€โ”€ CONSOLIDATED: 1 row per symbol, sorted by market value DESC โ”€โ”€ (เน€เธเธเธฒเธฐเธ—เธตเนเธขเธฑเธเธ–เธทเธญ)
+                    // ── CONSOLIDATED: 1 row per symbol, sorted by market value DESC ── (เฉพาะที่ยังถือ)
                     return [...consolidated].filter(h=>h.totalShares>0).sort((a,b)=>(b.marketValue||0)-(a.marketValue||0)).map(h=>{
                       const cp=h.currentPrice,fv=h.fairValue,wfv=h.worstFV,mv=h.marketValue;
                       const ap=totalMV>0?(mv/totalMV*100):0;
@@ -648,7 +705,7 @@ function App() {
                         portBadges={portBadges} ap={ap}/>;
                     });
                   } else {
-                    // โ”€โ”€ PER-PORT: individual rows sorted by market value DESC โ”€โ”€ (เน€เธเธเธฒเธฐเธ—เธตเนเธขเธฑเธเธ–เธทเธญ)
+                    // ── PER-PORT: individual rows sorted by market value DESC ── (เฉพาะที่ยังถือ)
                     const _all=activePorts.flatMap(port=>[...port.holdings].filter(h=>h.shares>0).map(h=>({h,port})));
                     _all.sort((a,b)=>(b.h.shares*(prices[b.h.symbol]??0))-(a.h.shares*(prices[a.h.symbol]??0)));
                     return _all.map(({h,port})=>{
@@ -665,7 +722,7 @@ function App() {
               </tbody>
               <tfoot>
                 <tr style={{borderTop:`2px solid ${C.border}`,background:"#f8fafc"}}>
-                  <td colSpan={15} style={{padding:"10px 8px",color:C.muted,fontSize:11,textAlign:"right",fontWeight:600}}>เธฃเธงเธกเธเธญเธฃเนเธ•</td>
+                  <td colSpan={15} style={{padding:"10px 8px",color:C.muted,fontSize:11,textAlign:"right",fontWeight:600}}>รวมพอร์ต</td>
                   <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:13}}>{fmtK(totalMV)}</td>
                   <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"'DM Mono',monospace",color:C.muted,fontWeight:600}}>100%</td>
                 </tr>
@@ -673,7 +730,7 @@ function App() {
             </table>
           </div>
 
-          {/* โ”€โ”€ Watch List โ”€โ”€ เธขเนเธฒเธขเนเธ Tab เธงเธดเน€เธเธฃเธฒเธฐเธซเน เนเธฅเนเธง */}
+          {/* ── Watch List ── ย้ายไป Tab วิเคราะห์ แล้ว */}
           {false&&(()=>{
             const soldOut=consolidated.filter(h=>h.totalShares===0);
             const wlSymSet=new Set(watchList.map(w=>w.symbol));
@@ -686,7 +743,7 @@ function App() {
                 const [editing,setEditing]=useState(false);
                 const [v,setV]=useState(String(val));
                 const save=()=>{ setWatchList(prev=>prev.map(w=>w.id!==id?w:{...w,[field]:parseFloat(v)||v})); setEditing(false); };
-                if(!editing)return <span onClick={()=>setEditing(true)} style={{cursor:"pointer",borderBottom:"1px dashed #cbd5e1",fontFamily:"'DM Mono',monospace"}}>{val||"โ€”"}</span>;
+                if(!editing)return <span onClick={()=>setEditing(true)} style={{cursor:"pointer",borderBottom:"1px dashed #cbd5e1",fontFamily:"'DM Mono',monospace"}}>{val||"—"}</span>;
                 return <input autoFocus type="number" value={v} style={{background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:6,color:C.text,padding:"2px 5px",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none",width:w}} onChange={e=>setV(e.target.value)} onBlur={save} onKeyDown={e=>e.key==="Enter"&&save()}/>;
               };
               return <WEC id={id} field={field} val={val} w={w}/>;
@@ -698,22 +755,22 @@ function App() {
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                 <div style={{fontWeight:800,fontSize:16,color:C.text}}>Watch List</div>
                 <button onClick={()=>setWlAdding(v=>!v)} style={{background:wlAdding?"#f1f5f9":"#6366f1",color:wlAdding?C.muted:"#fff",border:`1px solid ${wlAdding?C.border:"#6366f1"}`,borderRadius:8,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                  {wlAdding?"เธขเธเน€เธฅเธดเธ":"+ เน€เธเธดเนเธกเธซเธธเนเธ"}
+                  {wlAdding?"ยกเลิก":"+ เพิ่มหุ้น"}
                 </button>
               </div>
 
               {/* Add form */}
               {wlAdding&&<div style={{...card,marginBottom:12,border:`1px dashed #6366f1`,background:"#f8f8ff"}}>
-                <div style={{fontSize:12,fontWeight:700,color:"#6366f1",marginBottom:12}}>เน€เธเธดเนเธกเธซเธธเนเธเนเธ Watch List</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#6366f1",marginBottom:12}}>เพิ่มหุ้นใน Watch List</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
                   {[
-                    {lbl:"เธเธทเนเธญเธซเธธเนเธ*",k:"symbol",t:"text",w:90,ph:"ADVICE"},
+                    {lbl:"ชื่อหุ้น*",k:"symbol",t:"text",w:90,ph:"ADVICE"},
                     {lbl:"EPS Worst",k:"eps_worst",t:"number",w:80,ph:"0.521"},
                     {lbl:"EPS 3Y",k:"eps_3y",t:"number",w:80,ph:"1.441"},
                     {lbl:"PE Core",k:"pe_core",t:"number",w:65,ph:"10"},
                     {lbl:"PE Fair",k:"pe_fair",t:"number",w:65,ph:"12"},
                     {lbl:"Div",k:"div",t:"number",w:65,ph:"0.35"},
-                    {lbl:"เธซเธกเธฒเธขเน€เธซเธ•เธธ",k:"note",t:"text",w:120,ph:"เน€เธซเธ•เธธเธเธฅ"},
+                    {lbl:"หมายเหตุ",k:"note",t:"text",w:120,ph:"เหตุผล"},
                   ].map(({lbl,k,t,w,ph})=>(
                     <div key={k}>
                       <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.7,marginBottom:4}}>{lbl}</div>
@@ -727,18 +784,18 @@ function App() {
                     setWatchList(prev=>[...prev,{...wlAddForm,id:Date.now(),eps_worst:parseFloat(wlAddForm.eps_worst)||0,eps_3y:parseFloat(wlAddForm.eps_3y)||0,pe_core:parseFloat(wlAddForm.pe_core)||0,pe_fair:parseFloat(wlAddForm.pe_fair)||0,div:parseFloat(wlAddForm.div)||0}]);
                     setWlAddForm({symbol:"",eps_worst:"",eps_3y:"",pe_core:"",pe_fair:"",div:"",note:""});
                     setWlAdding(false);
-                  }} style={{background:"#6366f1",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",alignSelf:"flex-end"}}>+ เน€เธเธดเนเธก</button>
+                  }} style={{background:"#6366f1",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",alignSelf:"flex-end"}}>+ เพิ่ม</button>
                 </div>
               </div>}
 
               <div style={{...card,padding:0,overflowX:"auto"}}>
                 {displayWl.length===0
-                  ?<div style={{padding:"32px",textAlign:"center",color:C.muted,fontSize:13}}>เธขเธฑเธเนเธกเนเธกเธตเธซเธธเนเธเนเธ Watch List โ€” เธเธ” "+ เน€เธเธดเนเธกเธซเธธเนเธ"</div>
+                  ?<div style={{padding:"32px",textAlign:"center",color:C.muted,fontSize:13}}>ยังไม่มีหุ้นใน Watch List — กด "+ เพิ่มหุ้น"</div>
                   :<table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                     <thead>
                       <tr style={{borderBottom:`2px solid ${C.border}`,background:"#f8fafc"}}>
-                        <th style={{...thS,textAlign:"left",minWidth:80}}>เธซเธธเนเธ</th>
-                        <th style={{...thS,minWidth:60}}>เธฃเธฒเธเธฒ</th>
+                        <th style={{...thS,textAlign:"left",minWidth:80}}>หุ้น</th>
+                        <th style={{...thS,minWidth:60}}>ราคา</th>
                         <th style={{...thS,minWidth:65}}>EPS W</th>
                         <th style={{...thS,minWidth:65}}>EPS 3Y</th>
                         <th style={{...thS,minWidth:55}}>PE Core</th>
@@ -751,7 +808,7 @@ function App() {
                         <th style={{...thS,minWidth:70}}>CAGR 3Y*</th>
                         <th style={{...thS,minWidth:55}}>R/R</th>
                         <th style={{...thS,minWidth:90}}>Judgement</th>
-                        <th style={{...thS,minWidth:120,textAlign:"left"}}>เธซเธกเธฒเธขเน€เธซเธ•เธธ</th>
+                        <th style={{...thS,minWidth:120,textAlign:"left"}}>หมายเหตุ</th>
                         <th style={{...thS,minWidth:50}}></th>
                       </tr>
                     </thead>
@@ -766,26 +823,26 @@ function App() {
                           <tr key={w.id} className="rh" style={{borderBottom:`1px solid ${C.border}`,background:w._auto?"#fffbf0":""}}>
                             <td style={{padding:"9px 10px",fontWeight:700,fontSize:12,color:C.text}}>
                               {w.symbol}
-                              {w._auto&&<span style={{marginLeft:5,fontSize:9,background:"#fef3c7",color:"#b45309",border:"1px solid #fde68a",borderRadius:4,padding:"1px 5px",fontWeight:700,verticalAlign:"middle"}}>เธเธฒเธขเธซเธกเธ”</span>}
+                              {w._auto&&<span style={{marginLeft:5,fontSize:9,background:"#fef3c7",color:"#b45309",border:"1px solid #fde68a",borderRadius:4,padding:"1px 5px",fontWeight:700,verticalAlign:"middle"}}>ขายหมด</span>}
                             </td>
-                            <td style={{...tdS,color:cp>0?C.text:C.muted}}>{cp>0?fmt(cp):"โ€”"}</td>
+                            <td style={{...tdS,color:cp>0?C.text:C.muted}}>{cp>0?fmt(cp):"—"}</td>
                             <td style={{...tdS,color:C.sub}}>{w._auto?<span style={{fontFamily:"'DM Mono',monospace"}}>{fmt(w.eps_worst,3)}</span>:wlEditCell(w.id,"eps_worst",fmt(w.eps_worst,3))}</td>
                             <td style={{...tdS,color:C.sub}}>{w._auto?<span style={{fontFamily:"'DM Mono',monospace"}}>{fmt(w.eps_3y,3)}</span>:wlEditCell(w.id,"eps_3y",fmt(w.eps_3y,3))}</td>
                             <td style={{...tdS,color:C.sub}}>{w._auto?<span style={{fontFamily:"'DM Mono',monospace"}}>{fmt(w.pe_core,0)}</span>:wlEditCell(w.id,"pe_core",fmt(w.pe_core,0))}</td>
                             <td style={{...tdS,color:C.sub}}>{w._auto?<span style={{fontFamily:"'DM Mono',monospace"}}>{fmt(w.pe_fair,0)}</span>:wlEditCell(w.id,"pe_fair",fmt(w.pe_fair,0))}</td>
-                            <td style={{...tdS,fontWeight:600,color:wfv>0?(wfv>cp?C.up:C.dn):C.muted}}>{wfv>0?fmt(wfv):"โ€”"}</td>
-                            <td style={{...tdS,fontWeight:600,color:fv>0?(fv>cp?C.up:C.dn):C.muted}}>{fv>0?fmt(fv):"โ€”"}</td>
+                            <td style={{...tdS,fontWeight:600,color:wfv>0?(wfv>cp?C.up:C.dn):C.muted}}>{wfv>0?fmt(wfv):"—"}</td>
+                            <td style={{...tdS,fontWeight:600,color:fv>0?(fv>cp?C.up:C.dn):C.muted}}>{fv>0?fmt(fv):"—"}</td>
                             <td style={{...tdS,color:C.sub}}>{w._auto?<span style={{fontFamily:"'DM Mono',monospace"}}>{fmt(w.div,2)}</span>:wlEditCell(w.id,"div",fmt(w.div,2))}</td>
-                            <td style={{...tdS,fontWeight:600,color:downside!=null?(up(downside)?C.up:C.dn):C.muted}}>{downside!=null?pct(downside):"โ€”"}</td>
-                            <td style={{...tdS,fontWeight:600,color:upside!=null?(up(upside)?C.up:C.dn):C.muted}}>{upside!=null?pct(upside):"โ€”"}</td>
-                            <td style={{...tdS,fontWeight:600,color:ann3y!=null?(up(ann3y)?C.up:C.dn):C.muted}}>{ann3y!=null?pct(ann3y):"โ€”"}</td>
-                            <td style={{...tdS,fontWeight:700,color:rr!=null?(rr>7?C.up:rr>=5?"#d97706":C.muted):C.muted}}>{rr!=null?`${fmt(rr,1)}x`:"โ€”"}</td>
+                            <td style={{...tdS,fontWeight:600,color:downside!=null?(up(downside)?C.up:C.dn):C.muted}}>{downside!=null?pct(downside):"—"}</td>
+                            <td style={{...tdS,fontWeight:600,color:upside!=null?(up(upside)?C.up:C.dn):C.muted}}>{upside!=null?pct(upside):"—"}</td>
+                            <td style={{...tdS,fontWeight:600,color:ann3y!=null?(up(ann3y)?C.up:C.dn):C.muted}}>{ann3y!=null?pct(ann3y):"—"}</td>
+                            <td style={{...tdS,fontWeight:700,color:rr!=null?(rr>7?C.up:rr>=5?"#d97706":C.muted):C.muted}}>{rr!=null?`${fmt(rr,1)}x`:"—"}</td>
                             <td style={{...tdS}}>
-                              {jdg?<span style={{background:jdg.bg,color:jdg.color,border:`1px solid ${jdg.border}`,borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{jdg.text}</span>:<span style={{color:C.muted}}>โ€”</span>}
+                              {jdg?<span style={{background:jdg.bg,color:jdg.color,border:`1px solid ${jdg.border}`,borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{jdg.text}</span>:<span style={{color:C.muted}}>—</span>}
                             </td>
                             <td style={{padding:"9px 8px",fontSize:11,color:C.sub,maxWidth:140}}>
                               {w._auto
-                                ?<span style={{color:C.muted,fontStyle:"italic"}}>โ€”</span>
+                                ?<span style={{color:C.muted,fontStyle:"italic"}}>—</span>
                                 :<span contentEditable suppressContentEditableWarning
                                   onBlur={e=>setWatchList(prev=>prev.map(x=>x.id!==w.id?x:{...x,note:e.target.innerText}))}
                                   style={{display:"block",outline:"none",borderBottom:"1px dashed #e2e8f0",minWidth:80,cursor:"text"}}>
@@ -794,7 +851,7 @@ function App() {
                               }
                             </td>
                             <td style={{padding:"9px 8px",textAlign:"center"}}>
-                              {!w._auto&&<button onClick={()=>setWatchList(prev=>prev.filter(x=>x.id!==w.id))} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>เธฅเธ</button>}
+                              {!w._auto&&<button onClick={()=>setWatchList(prev=>prev.filter(x=>x.id!==w.id))} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>ลบ</button>}
                             </td>
                           </tr>
                         );
@@ -803,15 +860,15 @@ function App() {
                   </table>
                 }
               </div>
-              <div style={{fontSize:10,color:C.muted,marginTop:6,textAlign:"center"}}>* เธเธฅเธดเธเธเนเธฒ EPS/PE/Div เน€เธเธทเนเธญเนเธเนเนเธ ยท เธเธฅเธดเธเธเนเธญเธเธซเธกเธฒเธขเน€เธซเธ•เธธเน€เธเธทเนเธญเธเธดเธกเธเน</div>
+              <div style={{fontSize:10,color:C.muted,marginTop:6,textAlign:"center"}}>* คลิกค่า EPS/PE/Div เพื่อแก้ไข · คลิกช่องหมายเหตุเพื่อพิมพ์</div>
             </>
             );
           })()}
         </>}
 
-        {/* โ•โ• ANALYSIS โ•โ• */}
+        {/* ══ ANALYSIS ══ */}
         {tab==="analysis"&&(()=>{
-          // เธฃเธงเธก: portfolio stocks (เธ—เธธเธเธ•เธฑเธง เธฃเธงเธก sold-out) + watch-only stocks
+          // รวม: portfolio stocks (ทุกตัว รวม sold-out) + watch-only stocks
           const portSymbols=new Set(consolidated.map(h=>h.symbol));
           const wlOnlyItems=watchList
             .filter(w=>!portSymbols.has(w.symbol))
@@ -826,7 +883,7 @@ function App() {
             });
           const analysisItems=[...consolidated,...wlOnlyItems];
 
-          // routing edit: portfolio โ’ applyEditAll, watch-only โ’ setWatchList
+          // routing edit: portfolio → applyEditAll, watch-only → setWatchList
           const editAnalysis=(h,field,v)=>{
             if(h._watchOnly)
               setWatchList(prev=>prev.map(w=>w.symbol!==h.symbol?w:{...w,[field]:parseFloat(v)||0}));
@@ -838,26 +895,26 @@ function App() {
           {/* Judgement Summary */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
             {[
-              {key:"เธเธทเนเธญ",   label:"๐ข เธเธทเนเธญ",    color:"#16a34a", bg:"rgba(22,163,74,0.08)",   border:"rgba(22,163,74,0.2)",   cond:h=>h.rr!=null&&h.rr>7},
-              {key:"Monitor",label:"๐ก Monitor", color:"#d97706", bg:"rgba(245,158,11,0.08)",  border:"rgba(245,158,11,0.2)",  cond:h=>h.rr!=null&&h.rr>=5&&h.rr<=7},
-              {key:"เธเนเธฒเธเธกเธฑเธ",label:"โซ เธเนเธฒเธเธกเธฑเธ", color:"#94a3b8", bg:"rgba(148,163,184,0.08)",border:"rgba(148,163,184,0.2)",cond:h=>h.rr!=null&&h.rr<5},
+              {key:"ซื้อ",   label:"🟢 ซื้อ",    color:"#16a34a", bg:"rgba(22,163,74,0.08)",   border:"rgba(22,163,74,0.2)",   cond:h=>h.rr!=null&&h.rr>7},
+              {key:"Monitor",label:"🟡 Monitor", color:"#d97706", bg:"rgba(245,158,11,0.08)",  border:"rgba(245,158,11,0.2)",  cond:h=>h.rr!=null&&h.rr>=5&&h.rr<=7},
+              {key:"ช่างมัน",label:"⚫ ช่างมัน", color:"#94a3b8", bg:"rgba(148,163,184,0.08)",border:"rgba(148,163,184,0.2)",cond:h=>h.rr!=null&&h.rr<5},
             ].map(grp=>{
               const items=analysisItems.filter(grp.cond);
               return (
                 <div key={grp.key} style={{...card,border:`1px solid ${grp.border}`,background:grp.bg}}>
                   <div style={{fontWeight:700,fontSize:13,color:grp.color,marginBottom:10}}>{grp.label}</div>
-                  {items.length===0&&<div style={{color:C.muted,fontSize:12}}>เนเธกเนเธกเธต</div>}
+                  {items.length===0&&<div style={{color:C.muted,fontSize:12}}>ไม่มี</div>}
                   {items.map(h=>(
                     <div key={h.symbol} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,padding:"6px 8px",background:"rgba(255,255,255,0.6)",borderRadius:8}}>
                       <div>
                         <div style={{fontWeight:700,fontSize:12,color:C.text}}>
                           {h.symbol}
                         </div>
-                        <div style={{fontSize:10,color:C.muted}}>เธฟ{fmt(h.currentPrice)} โ’ FV เธฟ{fmt(h.fairValue)}</div>
+                        <div style={{fontSize:10,color:C.muted}}>฿{fmt(h.currentPrice)} → FV ฿{fmt(h.fairValue)}</div>
                       </div>
                       <div style={{textAlign:"right"}}>
                         <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:grp.color,fontSize:12}}>R/R {h.rr!=null?fmt(h.rr,1):"-"}x</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.muted}}>{h.upside!=null?pct(h.upside):"โ€”"} upside</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:C.muted}}>{h.upside!=null?pct(h.upside):"—"} upside</div>
                       </div>
                     </div>
                   ))}
@@ -866,21 +923,21 @@ function App() {
             })}
           </div>
 
-          {/* Risk/Reward table โ€” editable */}
+          {/* Risk/Reward table — editable */}
           <div style={{...card,padding:0,overflowX:"auto"}}>
             <div style={{padding:"14px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{fontWeight:700,fontSize:13}}>Risk to Reward โ€” เธ•เธฒเธฃเธฒเธ</div>
-              <div style={{fontSize:10,color:C.muted}}>๐’ก เธเธฅเธดเธเธ•เธฑเธงเน€เธฅเธเธเธตเธ”เน€เธชเนเธเนเธ•เนเน€เธเธทเนเธญเนเธเนเนเธ EPS / PE / Div</div>
+              <div style={{fontWeight:700,fontSize:13}}>Risk to Reward — ตาราง</div>
+              <div style={{fontSize:10,color:C.muted}}>💡 คลิกตัวเลขขีดเส้นใต้เพื่อแก้ไข EPS / PE / Div</div>
             </div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",padding:"6px 16px",borderBottom:`1px solid ${C.border}`,gap:8}}>
               <button onClick={()=>setWlAdding(v=>!v)} style={{background:wlAdding?"#f1f5f9":"#6366f1",color:wlAdding?C.muted:"#fff",border:`1px solid ${wlAdding?C.border:"#6366f1"}`,borderRadius:8,padding:"5px 14px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                {wlAdding?"เธขเธเน€เธฅเธดเธ":"+ เน€เธเธดเนเธกเธซเธธเนเธ Watch"}
+                {wlAdding?"ยกเลิก":"+ เพิ่มหุ้น Watch"}
               </button>
             </div>
             {wlAdding&&<div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,background:"#f8f8ff"}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#6366f1",marginBottom:10}}>เน€เธเธดเนเธกเธซเธธเนเธเนเธ Watch List</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#6366f1",marginBottom:10}}>เพิ่มหุ้นใน Watch List</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
-                {[{lbl:"เธเธทเนเธญเธซเธธเนเธ*",k:"symbol",t:"text",w:90,ph:"MOSHI"},{lbl:"EPS W",k:"eps_worst",t:"number",w:70,ph:"0.000"},{lbl:"EPS 3Y",k:"eps_3y",t:"number",w:70,ph:"0.000"},{lbl:"PE Core",k:"pe_core",t:"number",w:60,ph:"10"},{lbl:"PE Fair",k:"pe_fair",t:"number",w:60,ph:"12"},{lbl:"Div",k:"div",t:"number",w:60,ph:"0.00"}].map(({lbl,k,t,w,ph})=>(
+                {[{lbl:"ชื่อหุ้น*",k:"symbol",t:"text",w:90,ph:"MOSHI"},{lbl:"EPS W",k:"eps_worst",t:"number",w:70,ph:"0.000"},{lbl:"EPS 3Y",k:"eps_3y",t:"number",w:70,ph:"0.000"},{lbl:"PE Core",k:"pe_core",t:"number",w:60,ph:"10"},{lbl:"PE Fair",k:"pe_fair",t:"number",w:60,ph:"12"},{lbl:"Div",k:"div",t:"number",w:60,ph:"0.00"}].map(({lbl,k,t,w,ph})=>(
                   <div key={k}>
                     <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.7,marginBottom:4}}>{lbl}</div>
                     <input type={t} placeholder={ph} value={wlAddForm[k]}
@@ -893,13 +950,13 @@ function App() {
                   setWatchList(prev=>[...prev,{...wlAddForm,id:Date.now(),eps_worst:parseFloat(wlAddForm.eps_worst)||0,eps_3y:parseFloat(wlAddForm.eps_3y)||0,pe_core:parseFloat(wlAddForm.pe_core)||0,pe_fair:parseFloat(wlAddForm.pe_fair)||0,div:parseFloat(wlAddForm.div)||0}]);
                   setWlAddForm({symbol:"",eps_worst:"",eps_3y:"",pe_core:"",pe_fair:"",div:"",note:""});
                   setWlAdding(false);
-                }} style={{background:"#6366f1",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",alignSelf:"flex-end"}}>+ เน€เธเธดเนเธก</button>
+                }} style={{background:"#6366f1",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",alignSelf:"flex-end"}}>+ เพิ่ม</button>
               </div>
             </div>}
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead>
                 <tr style={{color:C.muted,textTransform:"uppercase",fontSize:10,borderBottom:`1px solid ${C.border}`,background:"#f8fafc"}}>
-                  {[["เธซเธธเนเธ","left",100],["เธฃเธฒเธเธฒ","right",65],["EPS W*","right",65],["EPS 3Y*","right",65],["PE Core*","right",62],["PE Fair*","right",62],["Worst FV","right",70],["Fair FV","right",70],["Div*","right",55],["Downside","right",75],["Upside 3Y","right",75],["CAGR 3Y*","right",72],["R/R","right",55],["Judgement","right",90],["เธชเธฑเธ”เธชเนเธงเธ","right",65],["","right",40]].map(([h,a,w])=>(
+                  {[["หุ้น","left",100],["ราคา","right",65],["EPS W*","right",65],["EPS 3Y*","right",65],["PE Core*","right",62],["PE Fair*","right",62],["Worst FV","right",70],["Fair FV","right",70],["Div*","right",55],["Downside","right",75],["Upside 3Y","right",75],["CAGR 3Y*","right",72],["R/R","right",55],["Judgement","right",90],["สัดส่วน","right",65],["","right",40]].map(([h,a,w])=>(
                     <th key={h} style={{textAlign:a,padding:"10px 10px",fontWeight:600,color:C.muted,minWidth:w,whiteSpace:"nowrap"}}>{h}</th>
                   ))}
                 </tr>
@@ -918,39 +975,39 @@ function App() {
                       <td style={{padding:"9px 10px",fontWeight:700,color:C.text}}>
                         {h.symbol}
                       </td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace"}}>{cp>0?fmt(cp):"โ€”"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace"}}>{cp>0?fmt(cp):"—"}</td>
                       <td style={{textAlign:"right",padding:"9px 10px",color:C.sub}}><EditCell val={h.eps_worst??0} display={fmt(h.eps_worst??0,3)} w={65} onSave={v=>editAnalysis(h,"eps_worst",v)}/></td>
                       <td style={{textAlign:"right",padding:"9px 10px",color:C.sub}}><EditCell val={h.eps_3y??0}    display={fmt(h.eps_3y??0,3)}    w={65} onSave={v=>editAnalysis(h,"eps_3y",v)}/></td>
                       <td style={{textAlign:"right",padding:"9px 10px",color:C.sub}}><EditCell val={h.pe_core??0}   display={fmt(h.pe_core??0,0)}   w={55} onSave={v=>editAnalysis(h,"pe_core",v)}/></td>
                       <td style={{textAlign:"right",padding:"9px 10px",color:C.sub}}><EditCell val={h.pe_fair??0}   display={fmt(h.pe_fair??0,0)}   w={55} onSave={v=>editAnalysis(h,"pe_fair",v)}/></td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:wfv>0?(wfv>cp?C.up:C.dn):C.muted}}>{wfv>0?fmt(wfv):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:fv>0?(fv>cp?C.up:C.dn):C.muted}}>{fv>0?fmt(fv):"โ€”"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:wfv>0?(wfv>cp?C.up:C.dn):C.muted}}>{wfv>0?fmt(wfv):"—"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:fv>0?(fv>cp?C.up:C.dn):C.muted}}>{fv>0?fmt(fv):"—"}</td>
                       <td style={{textAlign:"right",padding:"9px 10px",color:C.sub}}><EditCell val={h.div??0} display={fmt(h.div??0,2)} w={55} onSave={v=>editAnalysis(h,"div",v)}/></td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:h.downside!=null?(up(h.downside)?C.up:C.dn):C.muted}}>{h.downside!=null?pct(h.downside):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:h.upside!=null?(up(h.upside)?C.up:C.dn):C.muted}}>{h.upside!=null?pct(h.upside):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:h.annual3Y!=null?(up(h.annual3Y)?C.up:C.dn):C.muted}}>{h.annual3Y!=null?pct(h.annual3Y):"โ€”"}</td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:h.rr!=null?(h.rr>7?C.up:h.rr>=5?"#d97706":C.muted):C.muted}}>{h.rr!=null?`${fmt(h.rr,1)}x`:"โ€”"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:h.downside!=null?(up(h.downside)?C.up:C.dn):C.muted}}>{h.downside!=null?pct(h.downside):"—"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:h.upside!=null?(up(h.upside)?C.up:C.dn):C.muted}}>{h.upside!=null?pct(h.upside):"—"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:h.annual3Y!=null?(up(h.annual3Y)?C.up:C.dn):C.muted}}>{h.annual3Y!=null?pct(h.annual3Y):"—"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:h.rr!=null?(h.rr>7?C.up:h.rr>=5?"#d97706":C.muted):C.muted}}>{h.rr!=null?`${fmt(h.rr,1)}x`:"—"}</td>
                       <td style={{textAlign:"right",padding:"9px 10px"}}>
-                        {jdg?<span style={{background:jdg.bg,color:jdg.color,border:`1px solid ${jdg.border}`,borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700}}>{jdg.text}</span>:<span style={{color:C.muted}}>โ€”</span>}
+                        {jdg?<span style={{background:jdg.bg,color:jdg.color,border:`1px solid ${jdg.border}`,borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700}}>{jdg.text}</span>:<span style={{color:C.muted}}>—</span>}
                       </td>
-                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",color:C.muted}}>{ap>0?`${fmt(ap,1)}%`:"โ€”"}</td>
+                      <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"'DM Mono',monospace",color:C.muted}}>{ap>0?`${fmt(ap,1)}%`:"—"}</td>
                       <td style={{textAlign:"right",padding:"9px 10px"}}>
-                        {isWatch&&<button onClick={()=>setWatchList(prev=>prev.filter(x=>x.symbol!==h.symbol))} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>เธฅเธ</button>}
-                        {isSoldOut&&<button onClick={()=>setPorts(prev=>prev.map(p=>({...p,holdings:p.holdings.filter(x=>x.symbol!==h.symbol)})))} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>เธฅเธ</button>}
+                        {isWatch&&<button onClick={()=>setWatchList(prev=>prev.filter(x=>x.symbol!==h.symbol))} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>ลบ</button>}
+                        {isSoldOut&&<button onClick={()=>setPorts(prev=>prev.map(p=>({...p,holdings:p.holdings.filter(x=>x.symbol!==h.symbol)})))} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>ลบ</button>}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            <div style={{fontSize:10,color:C.muted,padding:"8px 16px",textAlign:"center"}}>* เธเธฅเธดเธเธเนเธฒ EPS/PE/Div เน€เธเธทเนเธญเนเธเนเนเธ ยท เธเธฒเธฃเนเธเนเนเธเธกเธตเธเธฅเธ—เธฑเนเธเนเธ Tab Stock เนเธฅเธฐ Tab เธงเธดเน€เธเธฃเธฒเธฐเธซเน</div>
+            <div style={{fontSize:10,color:C.muted,padding:"8px 16px",textAlign:"center"}}>* คลิกค่า EPS/PE/Div เพื่อแก้ไข · การแก้ไขมีผลทั้งใน Tab Stock และ Tab วิเคราะห์</div>
           </div>
           </>);
         })()}
 
-        {/* โ•โ• MANAGE โ•โ• */}
+        {/* ══ MANAGE ══ */}
         {tab==="manage"&&<>
-          <div style={{fontSize:11,color:C.muted,marginBottom:14}}>๐’ก เธเธฅเธดเธเธ•เธฑเธงเน€เธฅเธเธเธตเธ”เน€เธชเนเธเนเธ•เนเน€เธเธทเนเธญเนเธเนเนเธเนเธ”เนเธ—เธฑเธเธ—เธต ยท เธฃเธฒเธเธฒเธ•เนเธเธ—เธธเธ เธเธณเธเธงเธเธซเธธเนเธ EPS PE Div เธ—เธธเธเธเนเธฒเนเธเนเนเธ”เน</div>
+          <div style={{fontSize:11,color:C.muted,marginBottom:14}}>💡 คลิกตัวเลขขีดเส้นใต้เพื่อแก้ไขได้ทันที · ราคาต้นทุน จำนวนหุ้น EPS PE Div ทุกค่าแก้ได้</div>
           {ports.map(port=>{
             const portStockCost=port.holdings.reduce((a,h)=>a+h.shares*h.avgCost,0);
             const portTotalCost=portStockCost+port.cash;
@@ -964,12 +1021,12 @@ function App() {
                   <div>
                     <div style={{fontWeight:800,fontSize:15,color:port.color}}>{port.label}</div>
                     <div style={{fontSize:11,color:C.muted,marginTop:3,fontFamily:"'DM Mono',monospace"}}>
-                      MV {fmtK(portMV)} ยท Cost {fmtK(portTotalCost)} ยท
+                      MV {fmtK(portMV)} · Cost {fmtK(portTotalCost)} ·
                       <span style={{color:portPnL>=0?C.up:C.dn,fontWeight:600}}> {portPnL>=0?"+":""}{fmtK(portPnL)} ({pct(portPnLPct)})</span>
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 14px"}}>
-                    <span style={{fontSize:11,color:C.muted,fontWeight:600}}>๐’ต CASH</span>
+                    <span style={{fontSize:11,color:C.muted,fontWeight:600}}>💵 CASH</span>
                     <EditCell val={port.cash} display={fmtK(port.cash)} type="number" w={120} onSave={v=>updateCash(port.id,v)}/>
                   </div>
                 </div>
@@ -978,7 +1035,7 @@ function App() {
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                     <thead>
                       <tr style={{color:C.muted,textTransform:"uppercase",fontSize:10,borderBottom:`2px solid ${C.border}`}}>
-                        {["เธซเธธเนเธ","เธเธณเธเธงเธเธซเธธเนเธ","เธ•เนเธเธ—เธธเธ/เธซเธธเนเธ","เธ•เนเธเธ—เธธเธเธฃเธงเธก","เธกเธนเธฅเธเนเธฒเธ•เธฅเธฒเธ”","เธเธณเนเธฃ/เธเธฒเธ”เธ—เธธเธ","EPS W","EPS 3Y","PE Core","PE Fair","Div",""].map((h,i)=>(
+                        {["หุ้น","จำนวนหุ้น","ต้นทุน/หุ้น","ต้นทุนรวม","มูลค่าตลาด","กำไร/ขาดทุน","EPS W","EPS 3Y","PE Core","PE Fair","Div",""].map((h,i)=>(
                           <th key={i} style={{textAlign:i===0?"left":"right",padding:"9px 10px",fontWeight:600,color:C.muted,whiteSpace:"nowrap"}}>{h}</th>
                         ))}
                       </tr>
@@ -993,7 +1050,7 @@ function App() {
                               <EditCell val={h.shares} display={h.shares.toLocaleString()} type="number" w={100} onSave={v=>applyEdit(port.id,h.symbol,"shares",v)}/>
                             </td>
                             <td style={{textAlign:"right",padding:"10px 10px"}}>
-                              <EditCell val={h.avgCost} display={`เธฟ${fmt(h.avgCost)}`} type="number" w={85} onSave={v=>applyEdit(port.id,h.symbol,"avgCost",v)}/>
+                              <EditCell val={h.avgCost} display={`฿${fmt(h.avgCost)}`} type="number" w={85} onSave={v=>applyEdit(port.id,h.symbol,"avgCost",v)}/>
                             </td>
                             <td style={{textAlign:"right",padding:"10px 10px",fontFamily:"'DM Mono',monospace",color:C.sub}}>{fmtK(cost)}</td>
                             <td style={{textAlign:"right",padding:"10px 10px",fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmtK(mv)}</td>
@@ -1014,7 +1071,7 @@ function App() {
                               <EditCell val={h.div} display={fmt(h.div,2)} w={55} onSave={v=>applyEdit(port.id,h.symbol,"div",v)}/>
                             </td>
                             <td style={{textAlign:"right",padding:"10px 10px"}}>
-                              <button onClick={()=>removeHolding(port.id,h.symbol)} style={{background:"none",border:"1px solid #fca5a5",color:"#dc2626",borderRadius:6,padding:"3px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>เธฅเธ</button>
+                              <button onClick={()=>removeHolding(port.id,h.symbol)} style={{background:"none",border:"1px solid #fca5a5",color:"#dc2626",borderRadius:6,padding:"3px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>ลบ</button>
                             </td>
                           </tr>
                         );
@@ -1025,64 +1082,64 @@ function App() {
                 {/* Add holding */}
                 {showAddFor===port.id?(
                   <div style={{marginTop:14,padding:"16px",background:"#f8fafc",borderRadius:10,border:`1px dashed ${port.color}40`}}>
-                    <div style={{fontSize:12,fontWeight:700,color:port.color,marginBottom:12}}>+ เน€เธเธดเนเธกเธซเธธเนเธเนเธเธเธญเธฃเนเธ• {port.broker}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:port.color,marginBottom:12}}>+ เพิ่มหุ้นในพอร์ต {port.broker}</div>
                     <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-                      {[{lbl:"เธเธทเนเธญเธซเธธเนเธ",ph:"ADVICE",k:"symbol",t:"text",w:100},{lbl:"เธเธณเธเธงเธเธซเธธเนเธ",ph:"10000",k:"shares",t:"number",w:110},{lbl:"เธ•เนเธเธ—เธธเธ/เธซเธธเนเธ",ph:"5.46",k:"avgCost",t:"number",w:110}].map(({lbl,ph,k,t,w})=>(
+                      {[{lbl:"ชื่อหุ้น",ph:"ADVICE",k:"symbol",t:"text",w:100},{lbl:"จำนวนหุ้น",ph:"10000",k:"shares",t:"number",w:110},{lbl:"ต้นทุน/หุ้น",ph:"5.46",k:"avgCost",t:"number",w:110}].map(({lbl,ph,k,t,w})=>(
                         <div key={k}>
                           <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>{lbl}</div>
                           <input type={t} placeholder={ph} value={addForm[k]} onChange={e=>setAddForm(f=>({...f,[k]:t==="text"?e.target.value.toUpperCase():e.target.value}))} style={{...inp,width:w}}/>
                         </div>
                       ))}
-                      <button onClick={()=>addHolding(port.id)} style={{...btn(port.color),padding:"8px 22px",alignSelf:"flex-end"}}>+ เน€เธเธดเนเธก</button>
-                      <button onClick={()=>{setShowAddFor(null);setAddForm({symbol:"",shares:"",avgCost:""}); }} style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:12,fontFamily:"inherit",alignSelf:"flex-end"}}>เธขเธเน€เธฅเธดเธ</button>
+                      <button onClick={()=>addHolding(port.id)} style={{...btn(port.color),padding:"8px 22px",alignSelf:"flex-end"}}>+ เพิ่ม</button>
+                      <button onClick={()=>{setShowAddFor(null);setAddForm({symbol:"",shares:"",avgCost:""}); }} style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:12,fontFamily:"inherit",alignSelf:"flex-end"}}>ยกเลิก</button>
                     </div>
                     {addForm.symbol&&addForm.shares&&addForm.avgCost&&(
                       <div style={{marginTop:10,fontSize:11,color:C.sub}}>
-                        เธ•เนเธเธ—เธธเธเธฃเธงเธก: <strong style={{fontFamily:"'DM Mono',monospace",color:C.text}}>เธฟ{fmt(parseFloat(addForm.shares||0)*parseFloat(addForm.avgCost||0))}</strong>
+                        ต้นทุนรวม: <strong style={{fontFamily:"'DM Mono',monospace",color:C.text}}>฿{fmt(parseFloat(addForm.shares||0)*parseFloat(addForm.avgCost||0))}</strong>
                       </div>
                     )}
                   </div>
                 ):(
                   <button onClick={()=>{setShowAddFor(port.id);setAddForm({symbol:"",shares:"",avgCost:""}); }} style={{marginTop:14,width:"100%",background:"none",border:`1px dashed ${C.border}`,borderRadius:8,padding:"10px",color:C.muted,cursor:"pointer",fontSize:12,fontFamily:"inherit",transition:"all .15s"}} onMouseEnter={e=>e.target.style.borderColor=port.color} onMouseLeave={e=>e.target.style.borderColor=C.border}>
-                    + เน€เธเธดเนเธกเธซเธธเนเธเนเธเธเธญเธฃเนเธ• {port.broker}
+                    + เพิ่มหุ้นในพอร์ต {port.broker}
                   </button>
                 )}
               </div>
             );
           })}
           {/* CAGR note */}
-          <div style={{fontSize:10,color:C.muted,textAlign:"center",marginTop:4}}>* CAGR 3Y = เธเธฅเธ•เธญเธเนเธ—เธเธ—เธเธ•เนเธเธ•เนเธญเธเธตเนเธ 3 เธเธต เธเธณเธเธงเธ“เธเธฒเธ ((Fair Value + เน€เธเธดเธเธเธฑเธเธเธฅร—3) / เธฃเธฒเธเธฒเธเธฑเธเธเธธเธเธฑเธ)^(1/3) โ’ 1</div>
+          <div style={{fontSize:10,color:C.muted,textAlign:"center",marginTop:4}}>* CAGR 3Y = ผลตอบแทนทบต้นต่อปีใน 3 ปี คำนวณจาก ((Fair Value + เงินปันผล×3) / ราคาปัจจุบัน)^(1/3) − 1</div>
         </>}
 
-        {/* โ•โ• TRANSACTIONS โ•โ• */}
+        {/* ══ TRANSACTIONS ══ */}
         {tab==="transactions"&&<>
-          {!txList.length&&<div style={{...card,textAlign:"center",padding:"40px",color:C.muted}}>เธขเธฑเธเนเธกเนเธกเธตเธฃเธฒเธขเธเธฒเธฃ โ€” เธเธ” "+ เธฃเธฒเธขเธเธฒเธฃ" เธ”เนเธฒเธเธเธ</div>}
+          {!txList.length&&<div style={{...card,textAlign:"center",padding:"40px",color:C.muted}}>ยังไม่มีรายการ — กด "+ รายการ" ด้านบน</div>}
           {txList.map(tx=>{
             const port=ports.find(p=>p.id===tx.portId);
-            const ts={BUY:{bg:"rgba(16,185,129,.08)",c:"#16a34a",l:"เธเธทเนเธญ"},ADD:{bg:"rgba(99,102,241,.08)",c:"#6366f1",l:"เน€เธเธดเนเธก"},SELL:{bg:"rgba(220,38,38,.08)",c:"#dc2626",l:"เธเธฒเธข"},DEPOSIT:{bg:"rgba(129,140,248,.08)",c:"#6366f1",l:"เธเธฒเธ"},WITHDRAW:{bg:"rgba(220,38,38,.08)",c:"#dc2626",l:"เธ–เธญเธ"}}[tx.type]||{bg:"",c:C.text,l:tx.type};
+            const ts={BUY:{bg:"rgba(16,185,129,.08)",c:"#16a34a",l:"ซื้อ"},ADD:{bg:"rgba(99,102,241,.08)",c:"#6366f1",l:"เพิ่ม"},SELL:{bg:"rgba(220,38,38,.08)",c:"#dc2626",l:"ขาย"},DEPOSIT:{bg:"rgba(129,140,248,.08)",c:"#6366f1",l:"ฝาก"},WITHDRAW:{bg:"rgba(220,38,38,.08)",c:"#dc2626",l:"ถอน"}}[tx.type]||{bg:"",c:C.text,l:tx.type};
             const isCash=tx.mode==="cash";
             const isSell=tx.type==="SELL"||tx.type==="WITHDRAW";
             return (
               <div key={tx.id} style={{...card,marginBottom:8,padding:"12px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <span style={{background:ts.bg,color:ts.c,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,minWidth:42,textAlign:"center"}}>{ts.l}</span>
-                  <span style={{fontWeight:800,fontSize:13,minWidth:70,color:C.text}}>{isCash?"๐’ต เน€เธเธดเธเธชเธ”":tx.symbol}</span>
+                  <span style={{fontWeight:800,fontSize:13,minWidth:70,color:C.text}}>{isCash?"💵 เงินสด":tx.symbol}</span>
                   <span style={{fontSize:11,color:port?.color||C.muted,fontWeight:700,background:`${port?.color||"#888"}18`,borderRadius:4,padding:"2px 6px"}}>{port?.broker||tx.portId}</span>
                   <span style={{color:C.muted,fontSize:11}}>{fmtDate(tx.date)}</span>
                   <span style={{flex:1}}/>
-                  {!isCash&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.sub}}>{(tx.shares||0).toLocaleString()} เธซเธธเนเธ @ เธฟ{fmt(tx.price||0)}</span>}
+                  {!isCash&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.sub}}>{(tx.shares||0).toLocaleString()} หุ้น @ ฿{fmt(tx.price||0)}</span>}
                   {isCash&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:C.sub}}>{tx.note||""}</span>}
-                  <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:isSell?C.dn:C.up,minWidth:90,textAlign:"right"}}>{isSell?"-":"+"}เธฟ{fmt(tx.amount)}</span>
-                  <button onClick={()=>openEditTx(tx)} style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,borderRadius:6,padding:"3px 9px",fontSize:11,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>โ๏ธ เนเธเน</button>
-                  <button onClick={()=>deleteTx(tx.id)} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"3px 9px",fontSize:11,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>เธฅเธ</button>
+                  <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:isSell?C.dn:C.up,minWidth:90,textAlign:"right"}}>{isSell?"-":"+"}฿{fmt(tx.amount)}</span>
+                  <button onClick={()=>openEditTx(tx)} style={{background:"none",border:`1px solid ${C.border}`,color:C.muted,borderRadius:6,padding:"3px 9px",fontSize:11,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✏️ แก้</button>
+                  <button onClick={()=>deleteTx(tx.id)} style={{background:"none",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"3px 9px",fontSize:11,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>ลบ</button>
                 </div>
                 {/* commission detail row */}
                 {!isCash&&(tx.comm||0)>0&&(
                   <div style={{marginTop:6,paddingTop:6,borderTop:`1px dashed ${C.border}`,display:"flex",gap:16,fontSize:10,color:C.muted,fontFamily:"'DM Mono',monospace"}}>
-                    <span>เธกเธนเธฅเธเนเธฒเธซเธธเนเธ เธฟ{fmt(tx.amount)}</span>
-                    <span>Commission เธฟ{fmt(tx.comm||0)}</span>
-                    <span>VAT เธฟ{fmt(tx.vat||0)}</span>
-                    <span style={{fontWeight:700,color:isSell?"#dc2626":"#16a34a"}}>เธชเธธเธ—เธเธด {isSell?"-":"+"}เธฟ{fmt(tx.netTotal||tx.amount)}</span>
+                    <span>มูลค่าหุ้น ฿{fmt(tx.amount)}</span>
+                    <span>Commission ฿{fmt(tx.comm||0)}</span>
+                    <span>VAT ฿{fmt(tx.vat||0)}</span>
+                    <span style={{fontWeight:700,color:isSell?"#dc2626":"#16a34a"}}>สุทธิ {isSell?"-":"+"}฿{fmt(tx.netTotal||tx.amount)}</span>
                   </div>
                 )}
               </div>
@@ -1091,12 +1148,12 @@ function App() {
         </>}
       </div>
 
-      {/* โ•โ• MODAL: EOD MANUAL โ•โ• */}
+      {/* ══ MODAL: EOD MANUAL ══ */}
       {modal==="eod"&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16,backdropFilter:"blur(4px)"}}>
         <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:18,padding:24,width:"100%",maxWidth:440,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.15)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-            <div style={{fontWeight:800,fontSize:15,color:C.text}}>๐“ฅ EOD Manual Update โ€” {TODAY()}</div>
-            <button onClick={()=>setModal(null)} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>โ•</button>
+            <div style={{fontWeight:800,fontSize:15,color:C.text}}>📥 EOD Manual Update — {TODAY()}</div>
+            <button onClick={()=>setModal(null)} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>✕</button>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
             {[["SET",eSet,setESet],["SET50",eSet50,setESet50]].map(([lbl,val,setter])=>(
@@ -1104,7 +1161,7 @@ function App() {
             ))}
           </div>
           <div style={{borderTop:`1px solid ${C.border}`,paddingTop:14,marginBottom:16}}>
-            <div style={{fontSize:10,color:C.muted,marginBottom:12,textTransform:"uppercase",letterSpacing:.8,fontWeight:600}}>เธฃเธฒเธเธฒเธซเธธเนเธ</div>
+            <div style={{fontSize:10,color:C.muted,marginBottom:12,textTransform:"uppercase",letterSpacing:.8,fontWeight:600}}>ราคาหุ้น</div>
             {Object.keys(editP).map(sym=>{ const prev=prices[sym]||0,curr=parseFloat(editP[sym])||0,chg=prev>0?((curr-prev)/prev*100):0; return (
               <div key={sym} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                 <span style={{fontWeight:700,fontSize:12,minWidth:72,color:C.text}}>{sym}</span>
@@ -1114,11 +1171,11 @@ function App() {
               </div>
             ); })}
           </div>
-          <button onClick={saveEOD} style={{width:"100%",background:"#10b981",color:"#fff",border:"none",borderRadius:10,padding:"13px 0",cursor:"pointer",fontWeight:800,fontSize:13,fontFamily:"inherit"}}>๐’พ เธเธฑเธเธ—เธถเธ EOD</button>
+          <button onClick={saveEOD} style={{width:"100%",background:"#10b981",color:"#fff",border:"none",borderRadius:10,padding:"13px 0",cursor:"pointer",fontWeight:800,fontSize:13,fontFamily:"inherit"}}>💾 บันทึก EOD</button>
         </div>
       </div>}
 
-      {/* โ•โ• MODAL: TX โ•โ• */}
+      {/* ══ MODAL: TX ══ */}
       {modal==="tx"&&(()=>{
         const isEdit=!!txForm._editId;
         const gross=parseFloat(txForm.shares||0)*parseFloat(txForm.price||0);
@@ -1129,13 +1186,13 @@ function App() {
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16,backdropFilter:"blur(4px)"}}>
           <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:18,padding:24,width:"100%",maxWidth:460,maxHeight:"92vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.15)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontWeight:800,fontSize:15,color:C.text}}>{isEdit?"โ๏ธ เนเธเนเนเธเธฃเธฒเธขเธเธฒเธฃ":"+ เธเธฑเธเธ—เธถเธเธฃเธฒเธขเธเธฒเธฃ"}</div>
-              <button onClick={()=>{setModal(null);setTxForm(f=>({...f,_editId:null}));}} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>โ•</button>
+              <div style={{fontWeight:800,fontSize:15,color:C.text}}>{isEdit?"✏️ แก้ไขรายการ":"+ บันทึกรายการ"}</div>
+              <button onClick={()=>{setModal(null);setTxForm(f=>({...f,_editId:null}));}} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>✕</button>
             </div>
 
-            {/* Mode toggle โ€” disable when editing */}
+            {/* Mode toggle — disable when editing */}
             {!isEdit&&<div style={{display:"flex",gap:6,marginBottom:16,background:"#f1f5f9",borderRadius:10,padding:4}}>
-              {[["stock","๐“ เธเธทเนเธญ/เธเธฒเธขเธซเธธเนเธ"],["cash","๐’ต เนเธญเธเน€เธเธดเธ"]].map(([m,l])=>(
+              {[["stock","📈 ซื้อ/ขายหุ้น"],["cash","💵 โอนเงิน"]].map(([m,l])=>(
                 <button key={m} onClick={()=>setTxForm(f=>({...f,mode:m,type:m==="stock"?"BUY":"DEPOSIT"}))}
                   style={{flex:1,background:txForm.mode===m?"#fff":"transparent",color:txForm.mode===m?C.text:C.muted,border:"none",borderRadius:7,padding:"9px 0",cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit",boxShadow:txForm.mode===m?shadow:"none",transition:"all .15s"}}>{l}</button>
               ))}
@@ -1150,7 +1207,7 @@ function App() {
                 </select>
               </div>
               <div>
-                <label style={lbl}>เธงเธฑเธเธ—เธตเนเธ—เธณเธฃเธฒเธขเธเธฒเธฃ</label>
+                <label style={lbl}>วันที่ทำรายการ</label>
                 <input type="date" value={txForm.date} onChange={e=>setTxForm(f=>({...f,date:e.target.value}))} style={inp}/>
               </div>
             </div>
@@ -1158,7 +1215,7 @@ function App() {
             {txForm.mode==="stock"?<>
               {/* BUY / SELL */}
               <div style={{display:"flex",gap:6,marginBottom:12}}>
-                {[["BUY","เธเธทเนเธญ","#16a34a"],["SELL","เธเธฒเธข","#dc2626"]].map(([t,l,clr])=>(
+                {[["BUY","ซื้อ","#16a34a"],["SELL","ขาย","#dc2626"]].map(([t,l,clr])=>(
                   <button key={t} onClick={()=>setTxForm(f=>({...f,type:t}))}
                     style={{flex:1,background:txForm.type===t?`${clr}15`:"#f8fafc",border:`1.5px solid ${txForm.type===t?clr:C.border}`,color:txForm.type===t?clr:C.muted,borderRadius:8,padding:"9px 0",cursor:"pointer",fontWeight:800,fontSize:14,fontFamily:"inherit"}}>{l}</button>
                 ))}
@@ -1166,18 +1223,18 @@ function App() {
 
               {/* Symbol */}
               <div style={{marginBottom:12}}>
-                <label style={lbl}>เธเธทเนเธญเธซเธธเนเธ</label>
-                <input placeholder="เน€เธเนเธ ADVICE" value={txForm.symbol} onChange={e=>setTxForm(f=>({...f,symbol:e.target.value.toUpperCase()}))} style={{...inp,fontSize:15}}/>
+                <label style={lbl}>ชื่อหุ้น</label>
+                <input placeholder="เช่น ADVICE" value={txForm.symbol} onChange={e=>setTxForm(f=>({...f,symbol:e.target.value.toUpperCase()}))} style={{...inp,fontSize:15}}/>
               </div>
 
               {/* Shares + Price */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
                 <div>
-                  <label style={lbl}>เธเธณเธเธงเธเธซเธธเนเธ</label>
+                  <label style={lbl}>จำนวนหุ้น</label>
                   <input type="number" placeholder="10000" value={txForm.shares} onChange={e=>setTxForm(f=>({...f,shares:e.target.value}))} style={inp}/>
                 </div>
                 <div>
-                  <label style={lbl}>เธฃเธฒเธเธฒ/เธซเธธเนเธ (เธฟ)</label>
+                  <label style={lbl}>ราคา/หุ้น (฿)</label>
                   <input type="number" placeholder="5.95" value={txForm.price} onChange={e=>setTxForm(f=>({...f,price:e.target.value}))} style={inp}/>
                 </div>
               </div>
@@ -1185,15 +1242,15 @@ function App() {
               {/* Commission settings */}
               <div style={{background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",marginBottom:12}}>
                 <div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>
-                  เธเนเธฒเธเธญเธกเธฏ โ€” {BROKER_RATES[txForm.portId]?.label||txForm.portId} Online
+                  ค่าคอมฯ — {BROKER_RATES[txForm.portId]?.label||txForm.portId} Online
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                   <div>
-                    <label style={lbl}>เธญเธฑเธ•เธฃเธฒ Commission (%)</label>
+                    <label style={lbl}>อัตรา Commission (%)</label>
                     <input type="number" step="0.01" value={txForm.commRate} onChange={e=>setTxForm(f=>({...f,commRate:e.target.value}))} style={inp}/>
                   </div>
                   <div>
-                    <label style={lbl}>เธเธฑเนเธเธ•เนเธณ (เธฟ)</label>
+                    <label style={lbl}>ขั้นต่ำ (฿)</label>
                     <input type="number" value={txForm.commMin} onChange={e=>setTxForm(f=>({...f,commMin:e.target.value}))} style={inp}/>
                   </div>
                 </div>
@@ -1202,49 +1259,49 @@ function App() {
               {/* Summary */}
               {gross>0&&<div style={{background:txForm.type==="BUY"?"#f0fdf4":"#fff5f5",border:`1px solid ${txForm.type==="BUY"?"#bbf7d0":"#fecaca"}`,borderRadius:10,padding:"12px 14px",marginBottom:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.sub,marginBottom:5}}>
-                  <span>เธกเธนเธฅเธเนเธฒเธซเธธเนเธ ({(txForm.shares||0).toLocaleString()} ร— เธฟ{txForm.price})</span>
-                  <span style={{fontFamily:"'DM Mono',monospace"}}>เธฟ{fmt(gross)}</span>
+                  <span>มูลค่าหุ้น ({(txForm.shares||0).toLocaleString()} × ฿{txForm.price})</span>
+                  <span style={{fontFamily:"'DM Mono',monospace"}}>฿{fmt(gross)}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.sub,marginBottom:5}}>
-                  <span>Commission ({txForm.commRate}% min เธฟ{txForm.commMin})</span>
-                  <span style={{fontFamily:"'DM Mono',monospace"}}>เธฟ{fmt(comm)}</span>
+                  <span>Commission ({txForm.commRate}% min ฿{txForm.commMin})</span>
+                  <span style={{fontFamily:"'DM Mono',monospace"}}>฿{fmt(comm)}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.sub,marginBottom:8}}>
-                  <span>VAT 7% (เธเธฒเธ commission)</span>
-                  <span style={{fontFamily:"'DM Mono',monospace"}}>เธฟ{fmt(vat)}</span>
+                  <span>VAT 7% (จาก commission)</span>
+                  <span style={{fontFamily:"'DM Mono',monospace"}}>฿{fmt(vat)}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:800,borderTop:`1px solid ${txForm.type==="BUY"?"#bbf7d0":"#fecaca"}`,paddingTop:8}}>
-                  <span style={{color:txForm.type==="BUY"?"#16a34a":"#dc2626"}}>{txForm.type==="BUY"?"เธฃเธงเธกเธเนเธฒเธขเธ—เธฑเนเธเธซเธกเธ”":"เธฃเธฑเธเธชเธธเธ—เธเธด"}</span>
-                  <span style={{fontFamily:"'DM Mono',monospace",color:txForm.type==="BUY"?"#16a34a":"#dc2626"}}>{txForm.type==="BUY"?"+":"-"}เธฟ{fmt(netTotal)}</span>
+                  <span style={{color:txForm.type==="BUY"?"#16a34a":"#dc2626"}}>{txForm.type==="BUY"?"รวมจ่ายทั้งหมด":"รับสุทธิ"}</span>
+                  <span style={{fontFamily:"'DM Mono',monospace",color:txForm.type==="BUY"?"#16a34a":"#dc2626"}}>{txForm.type==="BUY"?"+":"-"}฿{fmt(netTotal)}</span>
                 </div>
               </div>}
 
               <button onClick={()=>{addTx();setModal(null);}} style={{width:"100%",...btn(txForm.type==="BUY"?"#16a34a":"#dc2626"),padding:"13px 0",fontSize:14,borderRadius:10}}>
-                {isEdit?"๐’พ เธเธฑเธเธ—เธถเธเธเธฒเธฃเนเธเนเนเธ":txForm.type==="BUY"?"โ… เธเธฑเธเธ—เธถเธเธเธฒเธฃเธเธทเนเธญ":"๐”ด เธเธฑเธเธ—เธถเธเธเธฒเธฃเธเธฒเธข"}
+                {isEdit?"💾 บันทึกการแก้ไข":txForm.type==="BUY"?"✅ บันทึกการซื้อ":"🔴 บันทึกการขาย"}
               </button>
 
             </>:<>
               {/* DEPOSIT / WITHDRAW */}
               <div style={{display:"flex",gap:6,marginBottom:12}}>
-                {[["DEPOSIT","เธเธฒเธ/เนเธญเธเน€เธเนเธฒ","#6366f1"],["WITHDRAW","เธ–เธญเธ/เนเธญเธเธญเธญเธ","#dc2626"]].map(([t,l,clr])=>(
+                {[["DEPOSIT","ฝาก/โอนเข้า","#6366f1"],["WITHDRAW","ถอน/โอนออก","#dc2626"]].map(([t,l,clr])=>(
                   <button key={t} onClick={()=>setTxForm(f=>({...f,type:t}))}
                     style={{flex:1,background:txForm.type===t?`${clr}15`:"#f8fafc",border:`1.5px solid ${txForm.type===t?clr:C.border}`,color:txForm.type===t?clr:C.muted,borderRadius:8,padding:"9px 0",cursor:"pointer",fontWeight:800,fontSize:13,fontFamily:"inherit"}}>{l}</button>
                 ))}
               </div>
               <div style={{marginBottom:12}}>
-                <label style={lbl}>เธเธณเธเธงเธเน€เธเธดเธ (เธฟ)</label>
+                <label style={lbl}>จำนวนเงิน (฿)</label>
                 <input type="number" placeholder="50000" value={txForm.amount} onChange={e=>setTxForm(f=>({...f,amount:e.target.value}))} style={{...inp,fontSize:16,fontFamily:"'DM Mono',monospace"}}/>
               </div>
               <div style={{marginBottom:12}}>
-                <label style={lbl}>เธซเธกเธฒเธขเน€เธซเธ•เธธ (เนเธกเนเธเธฑเธเธเธฑเธ)</label>
-                <input placeholder="เน€เธเนเธ เนเธญเธเน€เธเธดเนเธกเธ—เธธเธ Q2" value={txForm.note} onChange={e=>setTxForm(f=>({...f,note:e.target.value}))} style={inp}/>
+                <label style={lbl}>หมายเหตุ (ไม่บังคับ)</label>
+                <input placeholder="เช่น โอนเพิ่มทุน Q2" value={txForm.note} onChange={e=>setTxForm(f=>({...f,note:e.target.value}))} style={inp}/>
               </div>
               {txForm.amount&&<div style={{fontSize:12,marginBottom:14,padding:"10px 14px",background:txForm.type==="DEPOSIT"?"#f0f4ff":"#fff0f0",border:`1px solid ${txForm.type==="DEPOSIT"?"#c7d2fe":"#fecaca"}`,borderRadius:8,display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:C.sub}}>{txForm.type==="DEPOSIT"?"เน€เธเธดเนเธก Cash เนเธ":"เธฅเธ” Cash เนเธ"} {ports.find(p=>p.id===txForm.portId)?.label}</span>
-                <strong style={{color:txForm.type==="DEPOSIT"?"#6366f1":"#dc2626",fontFamily:"'DM Mono',monospace"}}>{txForm.type==="DEPOSIT"?"+":"-"}เธฟ{fmt(parseFloat(txForm.amount||0))}</strong>
+                <span style={{color:C.sub}}>{txForm.type==="DEPOSIT"?"เพิ่ม Cash ใน":"ลด Cash ใน"} {ports.find(p=>p.id===txForm.portId)?.label}</span>
+                <strong style={{color:txForm.type==="DEPOSIT"?"#6366f1":"#dc2626",fontFamily:"'DM Mono',monospace"}}>{txForm.type==="DEPOSIT"?"+":"-"}฿{fmt(parseFloat(txForm.amount||0))}</strong>
               </div>}
               <button onClick={()=>{addTx();setModal(null);}} style={{width:"100%",...btn(txForm.type==="DEPOSIT"?"#6366f1":"#dc2626"),padding:"13px 0",fontSize:14,borderRadius:10}}>
-                {isEdit?"๐’พ เธเธฑเธเธ—เธถเธเธเธฒเธฃเนเธเนเนเธ":txForm.type==="DEPOSIT"?"๐’ เธเธฑเธเธ—เธถเธเธเธฒเธฃเธเธฒเธ/เนเธญเธเน€เธเนเธฒ":"๐”ด เธเธฑเธเธ—เธถเธเธเธฒเธฃเธ–เธญเธ/เนเธญเธเธญเธญเธ"}
+                {isEdit?"💾 บันทึกการแก้ไข":txForm.type==="DEPOSIT"?"💜 บันทึกการฝาก/โอนเข้า":"🔴 บันทึกการถอน/โอนออก"}
               </button>
             </>}
           </div>
