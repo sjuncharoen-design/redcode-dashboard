@@ -12,625 +12,812 @@
     body{font-family:'DM Sans','Noto Sans Thai',sans-serif;background:#f8fafc;color:#1e293b}
     ::-webkit-scrollbar{width:5px;height:5px}
     ::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:5px}
-    ::-webkit-scrollbar-track{background:transparent}
     @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes sp{to{transform:rotate(360deg)}}
-    select option{background:#fff;color:#1e293b}
-    input:focus,select:focus,textarea:focus{border-color:#6366f1!important;outline:none!important}
+    input:focus,select:focus{border-color:#6366f1!important;outline:none!important}
   </style>
 </head>
 <body>
-<!-- Demo seed: inject last-week sample data if storage is empty -->
 <script>
+// ── Demo seed (runs once on empty localStorage) ──────────────────────────────
 (function(){
-  var KEY = 'rc_social_v1';
-  if (localStorage.getItem(KEY)) return; // already has data
-  var w = new Date(); w.setDate(w.getDate() - 7);
-  var d6 = new Date(); d6.setDate(d6.getDate() - 6);
-  var d5 = new Date(); d5.setDate(d5.getDate() - 5);
-  var d3 = new Date(); d3.setDate(d3.getDate() - 3);
-  var d1 = new Date(); d1.setDate(d1.getDate() - 1);
-  var fmt = function(dt){ return dt.toISOString().slice(0,10); };
-  var uid = function(){ return Date.now().toString(36) + Math.random().toString(36).slice(2); };
-  var demo = {
+  var K = 'rc_social_v1';
+  if (localStorage.getItem(K)) return;
+  var ago = function(n){ var d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
+  var id  = function(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); };
+  var D = {
     config: {
       trackedStocks: ['ADVICE','COM7','JMART'],
-      products: ['iPhone 17 128GB','iPhone 17 Pro 256GB','iPhone 17 Pro Max 256GB','Samsung S25 Ultra 256GB','MacBook Air M4 16GB','Smart TV 55" 4K QLED']
+      products: ['iPhone 17 128GB','iPhone 17 Pro 256GB','iPhone 17 Pro Max 256GB','Samsung S25 Ultra 256GB','MacBook Air M4 16GB']
     },
     stocks: {
       ADVICE: {
         prices: [
-          {id:uid(),product:'iPhone 17 128GB',store:'Advice',price:35900,promo:'ผ่อน 0% 10 เดือน Krungthai',warranty:'1 ปีศูนย์ Apple + 1 ปีAdv',url:'https://www.advice.co.th/product/apple-iphone-17',date:fmt(d6),note:'ราคาเปิดตัว'},
-          {id:uid(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promo:'ผ่อน 0% 10 เดือน + ฟรีเคส',warranty:'1 ปีศูนย์',url:'',date:fmt(d6),note:''},
-          {id:uid(),product:'iPhone 17 128GB',store:'Jmart / JMT',price:36500,promo:'แลกซื้อ Trade-in ลด 2,000',warranty:'1 ปีศูนย์',url:'',date:fmt(d5),note:'ราคาสูงกว่า แต่มี trade-in'},
-          {id:uid(),product:'iPhone 17 Pro 256GB',store:'Advice',price:46900,promo:'ผ่อน 0% 12 เดือน',warranty:'1 ปีศูนย์ + 1 ปีAdv',url:'',date:fmt(d6),note:''},
-          {id:uid(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46900,promo:'ผ่อน 0% 12 เดือน + AirPods',warranty:'1 ปีศูนย์',url:'',date:fmt(d5),note:'แถม AirPods มูลค่า 4,990'},
-          {id:uid(),product:'iPhone 17 Pro 256GB',store:'Jmart / JMT',price:47500,promo:'แลกซื้อ Trade-in ลด 3,000',warranty:'1 ปีศูนย์',url:'',date:fmt(d3),note:''},
-          {id:uid(),product:'Samsung S25 Ultra 256GB',store:'Advice',price:39900,promo:'ลด 2,000 บาท เฉพาะ weekend',warranty:'1 ปีศูนย์ Samsung',url:'',date:fmt(d3),note:'ราคาพิเศษ'},
-          {id:uid(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:41900,promo:'แถม Galaxy Buds',warranty:'1 ปีศูนย์',url:'',date:fmt(d5),note:''},
+          // iPhone 17 128GB — 2-week price history
+          {id:id(),product:'iPhone 17 128GB',store:'Advice',       price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน Krungthai',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(13),verified:true,note:'วันเปิดตัว'},
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',  price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน',          warranty:'1 ปีศูนย์',          url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'iPhone 17 128GB',store:'Jmart / JMT', price:36500,promoScore:2,promo:'Trade-in ลด 1,000',          warranty:'1 ปีศูนย์',          url:'',date:ago(13),verified:true,note:'ราคาสูงกว่า'},
+          {id:id(),product:'iPhone 17 128GB',store:'Advice',       price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน Krungthai',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(9), verified:true,note:''},
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',  price:35900,promoScore:4,promo:'ผ่อน 0% 10 เดือน + ฟรีเคส',  warranty:'1 ปีศูนย์',          url:'',date:ago(9), verified:true,note:'เพิ่มของแถม'},
+          {id:id(),product:'iPhone 17 128GB',store:'Jmart / JMT', price:36200,promoScore:3,promo:'Trade-in ลด 1,500',          warranty:'1 ปีศูนย์',          url:'',date:ago(9), verified:true,note:'ลดราคาลงมา'},
+          {id:id(),product:'iPhone 17 128GB',store:'Advice',       price:35900,promoScore:4,promo:'Weekend Deal + ผ่อน 0%',    warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(3), verified:true,note:'โปรวีคเอนด์'},
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',  price:35900,promoScore:5,promo:'Mega Deal: ผ่อน 0%+AirPods',  warranty:'1 ปีศูนย์',          url:'',date:ago(3), verified:true,note:'Deal สุดพิเศษ'},
+          {id:id(),product:'iPhone 17 128GB',store:'Jmart / JMT', price:35900,promoScore:4,promo:'Trade-in ลด 2,000 + ผ่อน 0%',warranty:'1 ปีศูนย์',          url:'',date:ago(1), verified:true,note:'ลดมาเท่ากันแล้ว'},
+          // iPhone 17 Pro 256GB
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Advice',       price:46900,promoScore:3,promo:'ผ่อน 0% 12 เดือน',          warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',  price:46900,promoScore:4,promo:'ผ่อน 0% 12 เดือน + AirPods',warranty:'1 ปีศูนย์',          url:'',date:ago(13),verified:true,note:'AirPods 4 มูลค่า 4,990'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Jmart / JMT', price:47500,promoScore:2,promo:'Trade-in ลด 2,000',          warranty:'1 ปีศูนย์',          url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Advice',       price:46900,promoScore:4,promo:'Weekend: ผ่อน 0%+ประกันฟรี',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(6), verified:true,note:''},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',  price:46500,promoScore:5,promo:'ลด 400 + AirPods Deal',     warranty:'1 ปีศูนย์',          url:'',date:ago(6), verified:true,note:'ลดราคาจริง'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Jmart / JMT', price:47000,promoScore:3,promo:'Trade-in ลด 2,500',          warranty:'1 ปีศูนย์',          url:'',date:ago(6), verified:true,note:''},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',  price:46900,promoScore:4,promo:'ผ่อน 0% 12 เดือน + AirPods',warranty:'1 ปีศูนย์',          url:'',date:ago(1), verified:true,note:'กลับราคาปกติ'},
+          // Samsung S25 Ultra
+          {id:id(),product:'Samsung S25 Ultra 256GB',store:'Advice',    price:39900,promoScore:4,promo:'ลด 2,000 Weekend Deal',    warranty:'1 ปีศูนย์ Samsung',url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:41900,promoScore:3,promo:'แถม Galaxy Buds3',        warranty:'1 ปีศูนย์',          url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'Samsung S25 Ultra 256GB',store:'Advice',    price:38900,promoScore:5,promo:'Flash Sale ลด 3,000',      warranty:'1 ปีศูนย์ Samsung',url:'',date:ago(6), verified:true,note:'โปรโกยังไง'},
+          {id:id(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:40900,promoScore:4,promo:'แถม Buds3+ลด 1,000',      warranty:'1 ปีศูนย์',          url:'',date:ago(3), verified:false,note:'รอยืนยัน'},
         ],
         sentiments: [
-          {id:uid(),source:'pantip',sentiment:'positive',title:'รีวิว Advice สาขา Future Park · บริการดีมาก พนักงานรู้จักสินค้า แนะนำดี',feedbackCount:87,date:fmt(d6),url:'',note:'กระทู้ถามซื้อ iPhone 17'},
-          {id:uid(),source:'pantip',sentiment:'positive',title:'Advice vs BNN ซื้อ iPhone 17 ที่ไหนดีกว่า? · ส่วนใหญ่แนะนำ Advice เรื่องโปรผ่อน',feedbackCount:142,date:fmt(d5),url:'',note:''},
-          {id:uid(),source:'google_rev',sentiment:'positive',title:'Google Review สาขา Central World 4.5★ (320 reviews) · ล่าสุดบวกมาก',feedbackCount:18,date:fmt(d3),url:'',note:'เดือน มิ.ย. 69'},
-          {id:uid(),source:'facebook_grp',sentiment:'negative',title:'กลุ่ม iPhone Thailand · คนร้องเรียนรอสินค้า Advice นาน ของไม่พอขาย',feedbackCount:23,date:fmt(d5),url:'',note:'สต็อก iPhone 17 Pro ไม่พอ'},
-          {id:uid(),source:'pantip',sentiment:'neutral',title:'ถามประกันเพิ่มค่ะ Advice ประกัน 1 ปีเพิ่ม vs AppleCare+ อันไหนคุ้มกว่า',feedbackCount:56,date:fmt(d1),url:'',note:''},
-          {id:uid(),source:'shopee_rev',sentiment:'positive',title:'Shopee Advice Official · Rating 4.8★ · ส่งเร็ว แพ็คดี สินค้าแท้',feedbackCount:210,date:fmt(d3),url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'positive',title:'รีวิว Advice สาขา Future Park · บริการดีมาก พนักงานรู้จักสินค้า',feedbackCount:87, date:ago(9), verified:true, url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'positive',title:'Advice vs BNN ซื้อ iPhone 17 ที่ไหนดีกว่า? ส่วนใหญ่แนะนำ Advice',feedbackCount:142,date:ago(6), verified:true, url:'',note:''},
+          {id:id(),source:'google_rev',sentiment:'positive',title:'Google Review Advice Central World 4.5★ (320 reviews)',       feedbackCount:18, date:ago(3), verified:true, url:'',note:'เดือน มิ.ย.'},
+          {id:id(),source:'facebook_grp',sentiment:'negative',title:'กลุ่ม iPhone TH · คนร้องเรียนสต็อก iPhone 17 Pro Advice ไม่พอ',feedbackCount:23,date:ago(9),verified:false,url:'',note:'สต็อกตึง'},
+          {id:id(),source:'shopee_rev',sentiment:'positive',title:'Shopee Advice Official · Rating 4.8★ ส่งเร็ว แพ็คดี',          feedbackCount:210,date:ago(3), verified:true, url:'',note:''},
         ],
         traffic: [
-          {id:uid(),source:'google_trends',value:68,date:fmt(d6),note:'ก่อน iPhone launch week'},
-          {id:uid(),source:'google_trends',value:82,date:fmt(d3),note:'สัปดาห์ launch iPhone 17'},
-          {id:uid(),source:'google_trends',value:91,date:fmt(d1),note:'peak launch ราคาลด weekend'},
-          {id:uid(),source:'google_reviews',value:18,date:fmt(d3),note:'New reviews/week สาขา Central World'},
+          {id:id(),source:'google_trends',  value:68, date:ago(13),verified:true, note:'ก่อน launch week'},
+          {id:id(),source:'google_trends',  value:82, date:ago(9), verified:true, note:'launch week'},
+          {id:id(),source:'google_trends',  value:91, date:ago(3), verified:true, note:'peak — weekend deal'},
+          {id:id(),source:'google_trends',  value:87, date:ago(1), verified:true, note:'ยังสูงอยู่'},
+          {id:id(),source:'google_reviews', value:18, date:ago(9), verified:true, note:'new reviews/สัปดาห์ สาขา Central World'},
+          {id:id(),source:'google_reviews', value:31, date:ago(3), verified:true, note:'เพิ่มขึ้น — launch traffic'},
+          {id:id(),source:'similarweb',     value:1850,date:ago(9),verified:false,note:'K visits/mo (advice.co.th)'},
+          {id:id(),source:'app_downloads',  value:42, date:ago(9), verified:false,note:'K downloads/mo (Advice App)'},
         ],
         news: [
-          {id:uid(),source:'news_official',sentiment:'positive',title:'Advice ประกาศเป้า iPhone 17 พรีออเดอร์ 5 หมื่นเครื่องใน Q3/69',publisher:'ประชาชาติธุรกิจ',date:fmt(d6),url:'',summary:'Advice ตั้งเป้าพรีออเดอร์ iPhone 17 สูงสุดในประวัติศาสตร์บริษัท'},
-          {id:uid(),source:'news_official',sentiment:'positive',title:'ADVICE Q2/69 กำไรโต 18% YoY แรงหนุนจาก iPhone cycle',publisher:'กรุงเทพธุรกิจ',date:fmt(d5),url:'',summary:'ผลประกอบการไตรมาส 2 แข็งแกร่ง margin การขาย iPhone ดีขึ้น'},
-          {id:uid(),source:'pantip',sentiment:'neutral',title:'Pantip: Advice เปิด pre-order iPhone 17 วันนี้ · queue ยาวออนไลน์',publisher:'',date:fmt(d3),url:'',summary:''},
+          {id:id(),source:'news_official',sentiment:'positive',title:'Advice ตั้งเป้า iPhone 17 Preorder 5 หมื่นเครื่อง Q3/69',publisher:'ประชาชาติธุรกิจ',date:ago(9),verified:true,url:'',summary:'ตั้งเป้าสูงสุดในประวัติศาสตร์ margin ดีขึ้น YoY'},
+          {id:id(),source:'news_official',sentiment:'positive',title:'ADVICE Q2/69 กำไรโต 18% YoY แรงหนุนจาก iPhone super cycle',publisher:'กรุงเทพธุรกิจ',date:ago(6),verified:true,url:'',summary:'ผลประกอบการแข็งแกร่ง Q2 margin iPhone ดีขึ้น'},
         ]
       },
       COM7: {
         prices: [
-          {id:uid(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promo:'ผ่อน 0% 10 เดือน + ฟรีเคส มูลค่า 590',warranty:'1 ปีศูนย์',url:'',date:fmt(d6),note:''},
-          {id:uid(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46900,promo:'ผ่อน 0% 12 เดือน + AirPods 4',warranty:'1 ปีศูนย์',url:'',date:fmt(d5),note:'แถม AirPods 4 มูลค่า 4,990'},
-          {id:uid(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:41900,promo:'แถม Galaxy Buds3 Pro',warranty:'1 ปีศูนย์',url:'',date:fmt(d5),note:''},
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:5,promo:'Mega Deal ผ่อน 0% + AirPods',warranty:'1 ปีศูนย์',url:'',date:ago(3),verified:true,note:'aggressive promo'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46900,promoScore:4,promo:'ผ่อน 0% + AirPods 4',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46500,promoScore:5,promo:'ลด 400 + AirPods Deal',warranty:'1 ปีศูนย์',url:'',date:ago(6),verified:true,note:'ลดราคาจริง'},
+          {id:id(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:41900,promoScore:3,promo:'แถม Galaxy Buds3',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
         ],
         sentiments: [
-          {id:uid(),source:'pantip',sentiment:'positive',title:'BNN สาขา MBK · พนักงานดี ไม่กดดัน มีสินค้าให้ทดลองเยอะ',feedbackCount:34,date:fmt(d6),url:'',note:''},
-          {id:uid(),source:'google_rev',sentiment:'positive',title:'COM7 BNN Central Rama9 · 4.4★ สาขาใหม่สวย',feedbackCount:12,date:fmt(d3),url:'',note:''},
-          {id:uid(),source:'facebook_grp',sentiment:'neutral',title:'ถาม BNN vs Advice แตกต่างยังไง ราคาเหมือนกัน แต่โปรต่างกัน',feedbackCount:45,date:fmt(d1),url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'positive',title:'BNN สาขา MBK · พนักงานดี มีสินค้าทดลองเยอะ ไม่กดดัน',feedbackCount:34,date:ago(9),verified:true,url:'',note:''},
+          {id:id(),source:'facebook_grp',sentiment:'neutral',title:'ถาม BNN vs Advice ต่างกันยังไง ราคาเหมือนกัน แต่โปรต่างกัน',feedbackCount:45,date:ago(3),verified:false,url:'',note:''},
         ],
         traffic: [
-          {id:uid(),source:'google_trends',value:54,date:fmt(d6),note:''},
-          {id:uid(),source:'google_trends',value:71,date:fmt(d3),note:'iPhone 17 launch week'},
-          {id:uid(),source:'google_trends',value:78,date:fmt(d1),note:''},
+          {id:id(),source:'google_trends',value:54,date:ago(13),verified:true,note:''},
+          {id:id(),source:'google_trends',value:71,date:ago(6), verified:true,note:'iPhone launch'},
+          {id:id(),source:'google_trends',value:78,date:ago(1), verified:true,note:''},
+          {id:id(),source:'google_reviews',value:12,date:ago(6),verified:false,note:'K reviews/mo'},
+          {id:id(),source:'similarweb',value:2100,date:ago(9),verified:false,note:'K visits/mo com7.co.th'},
         ],
         news: [
-          {id:uid(),source:'news_official',sentiment:'positive',title:'COM7 เปิดสาขา BNN ใหม่ 15 แห่งใน H2/69 ขยาย Tier 2 เมือง',publisher:'ไทยรัฐออนไลน์',date:fmt(d5),url:'',summary:'COM7 เร่งขยายสาขาต่างจังหวัด รับ iPhone super cycle'},
+          {id:id(),source:'news_official',sentiment:'positive',title:'COM7 เปิด BNN สาขาใหม่ 15 แห่ง H2/69 ขยาย Tier 2 เมือง',publisher:'ไทยรัฐออนไลน์',date:ago(6),verified:true,url:'',summary:''},
         ]
       },
       JMART: {
         prices: [
-          {id:uid(),product:'iPhone 17 128GB',store:'Jmart / JMT',price:36500,promo:'Trade-in ลด 2,000 · ผ่อน 0% 24 เดือน',warranty:'1 ปีศูนย์',url:'',date:fmt(d5),note:'เด่นเรื่องผ่อนนาน 24 เดือน'},
-          {id:uid(),product:'iPhone 17 Pro 256GB',store:'Jmart / JMT',price:47500,promo:'Trade-in ลด 3,000 · สินเชื่อ JMT',warranty:'1 ปีศูนย์',url:'',date:fmt(d3),note:'ราคาสูงกว่า แต่ financing ดีกว่า'},
+          {id:id(),product:'iPhone 17 128GB',store:'Jmart / JMT',price:36500,promoScore:2,promo:'Trade-in ลด 1,000',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'iPhone 17 128GB',store:'Jmart / JMT',price:36200,promoScore:3,promo:'Trade-in ลด 1,500 + ผ่อน 0% 24 เดือน',warranty:'1 ปีศูนย์',url:'',date:ago(9),verified:true,note:'จุดเด่น ผ่อน 24 เดือน'},
+          {id:id(),product:'iPhone 17 128GB',store:'Jmart / JMT',price:35900,promoScore:4,promo:'Trade-in ลด 2,000 + ผ่อน 0% 24 เดือน',warranty:'1 ปีศูนย์',url:'',date:ago(1),verified:true,note:'ลดมาเท่ากัน'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Jmart / JMT',price:47500,promoScore:2,promo:'Trade-in ลด 2,000',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Jmart / JMT',price:47000,promoScore:3,promo:'Trade-in ลด 2,500 + สินเชื่อ JMT',warranty:'1 ปีศูนย์',url:'',date:ago(6),verified:true,note:''},
         ],
         sentiments: [
-          {id:uid(),source:'pantip',sentiment:'positive',title:'Jmart สาขา Fashion Island · บริการสินเชื่อดีมาก อนุมัติไว JMT finance',feedbackCount:28,date:fmt(d6),url:'',note:'จุดเด่น financing'},
-          {id:uid(),source:'facebook_grp',sentiment:'negative',title:'กลุ่ม Consumer Thailand · Jmart ราคาแพงกว่า Advice 600 บาท ไม่คุ้ม',feedbackCount:67,date:fmt(d3),url:'',note:'เปรียบเทียบราคา'},
-          {id:uid(),source:'google_rev',sentiment:'neutral',title:'Jmart Central Ladprao 4.1★ · ดีแต่ราคาบางอย่างแพง',feedbackCount:8,date:fmt(d1),url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'positive',title:'Jmart Fashion Island · บริการสินเชื่อดีมาก อนุมัติไว JMT finance',feedbackCount:28,date:ago(9),verified:true,url:'',note:'จุดเด่น financing'},
+          {id:id(),source:'facebook_grp',sentiment:'negative',title:'Consumer TH · Jmart ราคาแพงกว่า Advice 600 บาท ไม่คุ้มถ้าไม่ต้องผ่อนนาน',feedbackCount:67,date:ago(6),verified:true,url:'',note:''},
         ],
         traffic: [
-          {id:uid(),source:'google_trends',value:41,date:fmt(d6),note:''},
-          {id:uid(),source:'google_trends',value:53,date:fmt(d3),note:'iPhone launch'},
-          {id:uid(),source:'google_trends',value:49,date:fmt(d1),note:'ต่ำกว่า ADVICE/COM7'},
+          {id:id(),source:'google_trends',value:41,date:ago(13),verified:true,note:''},
+          {id:id(),source:'google_trends',value:53,date:ago(6), verified:true,note:'launch week'},
+          {id:id(),source:'google_trends',value:49,date:ago(1), verified:true,note:'ต่ำกว่า ADVICE/COM7'},
+          {id:id(),source:'similarweb',value:890,date:ago(9),verified:false,note:'K visits/mo jmart.co.th'},
         ],
         news: [
-          {id:uid(),source:'news_official',sentiment:'neutral',title:'JMT Network รับพอร์ตหนี้ใหม่ Q2 ชะลอลง รอดูทิศทาง H2',publisher:'หุ้นกรุ๊ป',date:fmt(d5),url:'',summary:'JMT ลูกพี่ Jmart ยอด NPL อยู่ระดับควบคุมได้'},
+          {id:id(),source:'news_official',sentiment:'neutral',title:'JMT Network รับพอร์ตหนี้ใหม่ Q2 ชะลอ รอดู H2',publisher:'หุ้นกรุ๊ป',date:ago(6),verified:true,url:'',summary:'NPL อยู่ระดับควบคุมได้'},
         ]
       }
     }
   };
-  try { localStorage.setItem(KEY, JSON.stringify(demo)); } catch(e) {}
+  try { localStorage.setItem(K, JSON.stringify(D)); } catch(e){}
 })();
 </script>
-<div id="root">
-  <div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f8fafc">
-    <div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:sp .8s linear infinite"></div>
-    <div style="color:#94a3b8;font-size:13px;margin-top:14px">กำลังโหลด…</div>
-  </div>
-</div>
+<div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 const SOCIAL_KEY = 'rc_social_v1';
-const PORT_KEY   = 'port_v4';
 
 const SOURCES = {
-  pantip:        { label: 'Pantip',          icon: '🟡', cred: 4, color: '#f59e0b' },
-  blockdit:      { label: 'Blockdit',        icon: '🟢', cred: 3, color: '#16a34a' },
-  facebook_grp:  { label: 'Facebook Group',  icon: '🔵', cred: 2, color: '#3b82f6' },
-  facebook_pg:   { label: 'Facebook Page',   icon: '🔵', cred: 3, color: '#2563eb' },
-  twitter:       { label: 'X / Twitter',     icon: '⚫', cred: 3, color: '#334155' },
-  google_rev:    { label: 'Google Review',   icon: '🔴', cred: 4, color: '#ef4444' },
-  shopee_rev:    { label: 'Shopee Review',   icon: '🟠', cred: 3, color: '#f97316' },
-  lazada_rev:    { label: 'Lazada Review',   icon: '🟣', cred: 3, color: '#8b5cf6' },
-  news_official: { label: 'สำนักข่าว',       icon: '📰', cred: 5, color: '#0ea5e9' },
-  youtube:       { label: 'YouTube',         icon: '▶️', cred: 3, color: '#dc2626' },
-  manual:        { label: 'Manual',          icon: '✍️', cred: 1, color: '#94a3b8' },
+  pantip:        { label:'Pantip',         icon:'🟡', cred:4, color:'#f59e0b' },
+  blockdit:      { label:'Blockdit',       icon:'🟢', cred:3, color:'#16a34a' },
+  facebook_grp:  { label:'Facebook Group', icon:'🔵', cred:2, color:'#3b82f6' },
+  facebook_pg:   { label:'Facebook Page',  icon:'🔵', cred:3, color:'#2563eb' },
+  twitter:       { label:'X / Twitter',    icon:'⚫', cred:3, color:'#334155' },
+  google_rev:    { label:'Google Review',  icon:'🔴', cred:4, color:'#ef4444' },
+  shopee_rev:    { label:'Shopee Review',  icon:'🟠', cred:3, color:'#f97316' },
+  lazada_rev:    { label:'Lazada Review',  icon:'🟣', cred:3, color:'#8b5cf6' },
+  news_official: { label:'สำนักข่าว',      icon:'📰', cred:5, color:'#0ea5e9' },
+  youtube:       { label:'YouTube',        icon:'▶️', cred:3, color:'#dc2626' },
+  manual:        { label:'Manual',         icon:'✍️', cred:1, color:'#94a3b8' },
 };
-
-const STORES = ['Advice', 'COM7 / BNN', 'Jmart / JMT', 'iStudio', 'Samsung Shop', 'TrueMove Store', 'AIS Store', 'อื่นๆ'];
 
 const SENTIMENTS = {
-  positive: { label: 'เชิงบวก', color: '#059669', bg: '#d1fae5', emoji: '👍' },
-  neutral:  { label: 'กลางๆ',   color: '#d97706', bg: '#fef3c7', emoji: '😐' },
-  negative: { label: 'เชิงลบ',  color: '#dc2626', bg: '#fee2e2', emoji: '👎' },
+  positive:{ label:'เชิงบวก', color:'#059669', bg:'#d1fae5', emoji:'👍' },
+  neutral: { label:'กลางๆ',   color:'#d97706', bg:'#fef3c7', emoji:'😐' },
+  negative:{ label:'เชิงลบ',  color:'#dc2626', bg:'#fee2e2', emoji:'👎' },
 };
 
-const TRAFFIC_SOURCES = {
-  google_trends: { label: 'Google Trends (0–100)', desc: 'ดัชนีการค้นหา relative' },
-  similarweb:    { label: 'SimilarWeb Visits',     desc: 'Monthly visits (พัน)' },
-  app_downloads: { label: 'App Downloads',          desc: 'ยอด download (พัน/เดือน)' },
-  google_reviews:{ label: 'New Google Reviews',     desc: 'จำนวน review ใหม่/เดือน' },
-  shopee_sales:  { label: 'Shopee Sales Rank',      desc: 'อันดับหมวดสินค้า Shopee' },
-  manual_count:  { label: 'Manual Count',           desc: 'ลูกค้าที่สังเกตได้/ชั่วโมง' },
+const STORE_COLORS = {
+  'Advice':         '#6366f1',
+  'COM7 / BNN':    '#10b981',
+  'Jmart / JMT':   '#f59e0b',
+  'iStudio':        '#0ea5e9',
+  'Samsung Shop':   '#ef4444',
+  'TrueMove Store': '#8b5cf6',
+  'AIS Store':      '#06b6d4',
+  'อื่นๆ':          '#94a3b8',
 };
 
-const DEFAULT_STOCKS = ['ADVICE', 'COM7', 'JMART'];
+const PROMO_LEVELS = [
+  { v:1, label:'ราคาปกติ',        color:'#94a3b8', bg:'#f1f5f9', emoji:'⚪' },
+  { v:2, label:'ส่วนลดเล็กน้อย', color:'#64748b', bg:'#e2e8f0', emoji:'🟡' },
+  { v:3, label:'โปรปกติ',         color:'#d97706', bg:'#fef3c7', emoji:'🟠' },
+  { v:4, label:'โปรดีกว่าปกติ',  color:'#ea580c', bg:'#fff7ed', emoji:'🔴' },
+  { v:5, label:'Deal สุดพิเศษ',  color:'#dc2626', bg:'#fee2e2', emoji:'🔥' },
+];
 
-// ── Storage ──────────────────────────────────────────────────────────────────
-const mkStock = () => ({ prices: [], sentiments: [], traffic: [], news: [] });
+// Traffic: value entered in natural units; max = typical ceiling for Thai IT retail
+const TRAFFIC_CFG = {
+  google_trends:  { label:'Google Trends',      unit:'(0–100)',        w:0.35, max:100,   desc:'ดัชนี relative ค้นหา' },
+  similarweb:     { label:'SimilarWeb',          unit:'K visits/mo',    w:0.30, max:5000,  desc:'Monthly web visits พัน' },
+  app_downloads:  { label:'App Downloads',       unit:'K/mo',           w:0.20, max:500,   desc:'Download รายเดือน พัน' },
+  google_reviews: { label:'New Google Reviews',  unit:'reviews/period', w:0.15, max:200,   desc:'Review ใหม่ต่อเดือน' },
+  shopee_sales:   { label:'Shopee Sales',        unit:'units/mo',       w:0.10, max:10000, desc:'ยอดขาย Shopee/เดือน' },
+  manual_count:   { label:'Manual Count',        unit:'/hr',            w:0.05, max:100,   desc:'นับเอง ลูกค้า/ชั่วโมง' },
+};
+
+const STORES  = ['Advice','COM7 / BNN','Jmart / JMT','iStudio','Samsung Shop','TrueMove Store','AIS Store','อื่นๆ'];
+const DEF_STOCKS = ['ADVICE','COM7','JMART'];
+
+// ── Storage ───────────────────────────────────────────────────────────────────
+const mkStock = () => ({ prices:[], sentiments:[], traffic:[], news:[] });
 
 const loadData = () => {
-  try {
-    const raw = localStorage.getItem(SOCIAL_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  // seed tracked stocks from portfolio if available
-  let stocks = [...DEFAULT_STOCKS];
-  try {
-    const port = JSON.parse(localStorage.getItem(PORT_KEY) || 'null');
-    if (port && port.ports) {
-      const syms = new Set();
-      port.ports.forEach(p => (p.holdings || []).forEach(h => syms.add(h.symbol)));
-      if (syms.size) stocks = [...syms].slice(0, 12);
-    }
-  } catch {}
-  const data = {
-    config: {
-      trackedStocks: stocks,
-      products: ['iPhone 17 128GB', 'iPhone 17 Pro 256GB', 'iPhone 17 Pro Max 256GB',
-                 'Samsung S25 Ultra', 'Notebook Gaming RTX 4060', 'Smart TV 55" 4K'],
-    },
-    stocks: Object.fromEntries(stocks.map(s => [s, mkStock()])),
-  };
-  return data;
+  try { const r = localStorage.getItem(SOCIAL_KEY); if (r) return JSON.parse(r); } catch {}
+  return { config:{ trackedStocks:[...DEF_STOCKS], products:['iPhone 17 128GB','iPhone 17 Pro 256GB','Samsung S25 Ultra 256GB'] }, stocks:{} };
 };
+const saveData = d => { try { localStorage.setItem(SOCIAL_KEY, JSON.stringify(d)); } catch {} };
 
-const saveData = d => {
-  try { localStorage.setItem(SOCIAL_KEY, JSON.stringify(d)); } catch {}
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const uid     = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
+const fmtN    = n  => (+(n)||0).toLocaleString('th-TH');
+const fmtDate = d  => d ? new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '';
+const today   = () => new Date().toISOString().slice(0,10);
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-const fmtN  = n  => (+(n) || 0).toLocaleString('th-TH');
-const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '';
-const today = () => new Date().toISOString().slice(0, 10);
-
-// Credibility-weighted sentiment score: -100 to +100
-const calcSentScore = (items) => {
-  if (!items || items.length === 0) return null;
-  let wSum = 0, wTotal = 0;
-  items.forEach(s => {
-    const w = (SOURCES[s.source]?.cred || 1) * Math.max(1, Number(s.feedbackCount) || 1);
-    const v = s.sentiment === 'positive' ? 1 : s.sentiment === 'negative' ? -1 : 0;
-    wSum += v * w; wTotal += w;
+const calcSentScore = items => {
+  if (!items||!items.length) return null;
+  let ws=0,wt=0;
+  items.forEach(s=>{
+    const w=(SOURCES[s.source]?.cred||1)*Math.max(1,Number(s.feedbackCount)||1);
+    const v=s.sentiment==='positive'?1:s.sentiment==='negative'?-1:0;
+    ws+=v*w; wt+=w;
   });
-  return wTotal > 0 ? Math.round((wSum / wTotal) * 100) : 0;
+  return wt>0 ? Math.round((ws/wt)*100) : 0;
 };
 
-// ── Primitive UI ──────────────────────────────────────────────────────────────
+const calcTrafficComposite = traffic => {
+  if (!traffic||!traffic.length) return { score:null, confidence:0, breakdown:[] };
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-30);
+  const cut = cutoff.toISOString().slice(0,10);
+  const latest = {};
+  traffic.filter(t=>t.date>=cut).forEach(t=>{
+    if (!latest[t.source]||t.date>latest[t.source].date) latest[t.source]=t;
+  });
+  let ws=0,wt=0; const breakdown=[];
+  Object.entries(TRAFFIC_CFG).forEach(([src,cfg])=>{
+    const e=latest[src]; if(!e) return;
+    const norm = Math.min(100,Math.round((e.value/cfg.max)*100));
+    breakdown.push({src,label:cfg.label,value:e.value,unit:cfg.unit,norm,w:cfg.w,date:e.date,verified:e.verified});
+    ws+=norm*cfg.w; wt+=cfg.w;
+  });
+  const maxW = Object.values(TRAFFIC_CFG).reduce((a,b)=>a+b.w,0);
+  return {
+    score: wt>0 ? Math.round(ws/wt) : null,
+    confidence: Math.round((wt/maxW)*100),
+    breakdown,
+  };
+};
 
-const C = { bg: '#f8fafc', card: '#fff', border: '#e2e8f0', text: '#0f172a',
-             sub: '#475569', muted: '#94a3b8', indigo: '#6366f1' };
+const getPromoTrend = prices => {
+  const byWeek={};
+  prices.filter(p=>p.promoScore).forEach(p=>{
+    const d=new Date(p.date+'T00:00:00');
+    const mon=new Date(d); mon.setDate(d.getDate()-((d.getDay()+6)%7));
+    const wk=mon.toISOString().slice(0,10);
+    if(!byWeek[wk]) byWeek[wk]=[];
+    byWeek[wk].push({score:p.promoScore,store:p.store,promo:p.promo});
+  });
+  const weeks=Object.keys(byWeek).sort().slice(-8);
+  const data=weeks.map(wk=>({
+    week:wk,
+    avg:byWeek[wk].reduce((a,b)=>a+b.score,0)/byWeek[wk].length,
+    count:byWeek[wk].length,
+    entries:byWeek[wk],
+  }));
+  const cur=data[data.length-1];
+  const hist=data.slice(0,-1);
+  const baseline=hist.length ? hist.reduce((a,w)=>a+w.avg,0)/hist.length : null;
+  const alertLevel = (baseline&&cur) ? cur.avg/baseline : 1;
+  return {data, cur, baseline, alertLevel};
+};
 
-const Card = ({ children, style }) => (
-  <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
-    padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,.04)', ...style }}>
-    {children}
-  </div>
+// ── UI Primitives ─────────────────────────────────────────────────────────────
+const C={bg:'#f8fafc',card:'#fff',border:'#e2e8f0',text:'#0f172a',sub:'#475569',muted:'#94a3b8',indigo:'#6366f1'};
+
+const Card=({children,style})=>(
+  <div style={{background:C.card,borderRadius:14,border:`1px solid ${C.border}`,padding:20,boxShadow:'0 1px 3px rgba(0,0,0,.04)',...style}}>{children}</div>
 );
-
-const SH = ({ title, sub, right }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 }}>
+const SH=({title,sub,right})=>(
+  <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:14}}>
     <div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{title}</div>
-      {sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sub}</div>}
+      <div style={{fontSize:14,fontWeight:700,color:C.text}}>{title}</div>
+      {sub&&<div style={{fontSize:11,color:C.muted,marginTop:2}}>{sub}</div>}
     </div>
-    {right && <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{right}</div>}
+    {right&&<div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>{right}</div>}
   </div>
 );
-
-const Btn = ({ onClick, children, v = 'primary', sm, disabled }) => {
-  const s = {
-    primary: { background: C.indigo, color: '#fff', border: 'none' },
-    outline:  { background: 'transparent', color: C.indigo, border: `1px solid ${C.indigo}` },
-    ghost:    { background: 'transparent', color: C.sub, border: 'none' },
-    danger:   { background: 'transparent', color: '#dc2626', border: '1px solid #dc2626' },
-  }[v] || {};
-  return (
-    <button onClick={onClick} disabled={disabled}
-      style={{ ...s, padding: sm ? '4px 12px' : '8px 18px', borderRadius: 8,
-        fontSize: sm ? 12 : 14, fontWeight: 600, cursor: disabled ? 'default' : 'pointer',
-        fontFamily: 'inherit', opacity: disabled ? .5 : 1, flexShrink: 0 }}>
-      {children}
-    </button>
-  );
+const Btn=({onClick,children,v='primary',sm,disabled})=>{
+  const s={
+    primary:{background:C.indigo,color:'#fff',border:'none'},
+    outline:{background:'transparent',color:C.indigo,border:`1px solid ${C.indigo}`},
+    ghost:  {background:'transparent',color:C.sub,border:'none'},
+    green:  {background:'#059669',color:'#fff',border:'none'},
+  }[v]||{};
+  return <button onClick={onClick} disabled={disabled} style={{...s,padding:sm?'4px 12px':'8px 18px',borderRadius:8,fontSize:sm?12:14,fontWeight:600,cursor:disabled?'default':'pointer',fontFamily:'inherit',opacity:disabled?.5:1,flexShrink:0}}>{children}</button>;
 };
-
-const Inp = ({ value, onChange, placeholder, type = 'text', style }) => (
-  <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)}
-    placeholder={placeholder}
-    style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px',
-      fontSize: 13, fontFamily: 'inherit', width: '100%', background: '#fff', ...style }} />
+const Inp=({value,onChange,placeholder,type='text',style})=>(
+  <input type={type} value={value??''} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+    style={{border:`1px solid ${C.border}`,borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'inherit',width:'100%',background:'#fff',...style}}/>
 );
-
-const Sel = ({ value, onChange, children, style }) => (
-  <select value={value} onChange={e => onChange(e.target.value)}
-    style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px',
-      fontSize: 13, fontFamily: 'inherit', background: '#fff', cursor: 'pointer',
-      width: '100%', ...style }}>
+const Sel=({value,onChange,children,style})=>(
+  <select value={value} onChange={e=>onChange(e.target.value)}
+    style={{border:`1px solid ${C.border}`,borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'inherit',background:'#fff',cursor:'pointer',width:'100%',...style}}>
     {children}
   </select>
 );
-
-const Tag = ({ text, color, bg, size = 12 }) => (
-  <span style={{ padding: `2px 8px`, borderRadius: 999, background: bg, color,
-    fontSize: size, fontWeight: 700, flexShrink: 0 }}>{text}</span>
+const FLabel=({children})=>(
+  <div style={{fontSize:11,fontWeight:600,color:C.sub,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>{children}</div>
 );
+const G2=({children,style})=>(<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,...style}}>{children}</div>);
 
-const SignalBadge = ({ score, size = 'sm' }) => {
-  let label, color, bg;
-  if (score === null || score === undefined) { label = 'ไม่มีข้อมูล'; color = C.muted; bg = '#f1f5f9'; }
-  else if (score >= 30)  { label = '▲ เชิงบวก'; color = '#059669'; bg = '#d1fae5'; }
-  else if (score >= -30) { label = '◆ กลางๆ';   color = '#d97706'; bg = '#fef3c7'; }
-  else                   { label = '▼ เชิงลบ'; color = '#dc2626'; bg = '#fee2e2'; }
-  const pad = size === 'lg' ? '7px 18px' : '3px 10px';
-  return <span style={{ padding: pad, borderRadius: 999, background: bg, color,
-    fontSize: size === 'lg' ? 15 : 12, fontWeight: 700 }}>{label}</span>;
+const SignalBadge=({score,size='sm'})=>{
+  let label,color,bg;
+  if(score===null||score===undefined){label='ไม่มีข้อมูล';color=C.muted;bg='#f1f5f9';}
+  else if(score>=30){label='▲ เชิงบวก';color='#059669';bg='#d1fae5';}
+  else if(score>=-30){label='◆ กลางๆ';color='#d97706';bg='#fef3c7';}
+  else{label='▼ เชิงลบ';color='#dc2626';bg='#fee2e2';}
+  return <span style={{padding:size==='lg'?'7px 18px':'3px 10px',borderRadius:999,background:bg,color,fontSize:size==='lg'?15:12,fontWeight:700,flexShrink:0}}>{label}</span>;
 };
 
-const Gauge = ({ score }) => {
-  if (score === null) return <div style={{ color: C.muted, textAlign: 'center', padding: '12px 0', fontSize: 13 }}>ยังไม่มีข้อมูล</div>;
-  const pct = Math.max(0, Math.min(100, ((score + 100) / 200) * 100));
-  const color = score >= 30 ? '#10b981' : score >= -30 ? '#f59e0b' : '#ef4444';
+const Gauge=({score})=>{
+  if(score===null) return <div style={{color:C.muted,textAlign:'center',padding:'12px 0',fontSize:13}}>ยังไม่มีข้อมูล</div>;
+  const pct=Math.max(0,Math.min(100,((score+100)/200)*100));
+  const color=score>=30?'#10b981':score>=-30?'#f59e0b':'#ef4444';
   return (
     <div>
-      <div style={{ height: 10, background: '#e2e8f0', borderRadius: 5, overflow: 'hidden', marginBottom: 5 }}>
-        <div style={{ height: '100%', width: `${pct}%`,
-          background: 'linear-gradient(90deg,#ef4444 0%,#f59e0b 50%,#10b981 100%)',
-          borderRadius: 5, transition: 'width .5s ease' }} />
+      <div style={{height:10,background:'#e2e8f0',borderRadius:5,overflow:'hidden',marginBottom:5}}>
+        <div style={{height:'100%',width:`${pct}%`,background:'linear-gradient(90deg,#ef4444 0%,#f59e0b 50%,#10b981 100%)',borderRadius:5,transition:'width .5s'}}/>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.muted }}>
-        <span>เชิงลบ -100</span>
-        <span style={{ color, fontWeight: 800, fontSize: 18 }}>{score > 0 ? '+' : ''}{score}</span>
-        <span>+100 เชิงบวก</span>
+      <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:C.muted}}>
+        <span>-100</span>
+        <span style={{color,fontWeight:800,fontSize:18}}>{score>0?'+':''}{score}</span>
+        <span>+100</span>
       </div>
     </div>
   );
 };
 
-// ── Form wrapper ──────────────────────────────────────────────────────────────
-const FormBox = ({ children, onSave, onCancel, title }) => (
-  <div style={{ background: '#f8fafc', border: `1px solid ${C.border}`, borderRadius: 12,
-    padding: 16, marginBottom: 20, animation: 'fadeUp .15s ease' }}>
-    {title && <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
-    {children}
-    <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-      <Btn onClick={onSave}>💾 บันทึก</Btn>
-      <Btn onClick={onCancel} v="ghost">ยกเลิก</Btn>
+// ── Verified Badge ────────────────────────────────────────────────────────────
+const VBadge=({verified,small})=>verified ? (
+  <span style={{padding:small?'1px 5px':'2px 7px',background:'#d1fae5',color:'#059669',borderRadius:999,fontSize:small?9:11,fontWeight:700,flexShrink:0}}>✓ ยืนยันแล้ว</span>
+) : (
+  <span style={{padding:small?'1px 5px':'2px 7px',background:'#f1f5f9',color:C.muted,borderRadius:999,fontSize:small?9:11,fontWeight:600,flexShrink:0}}>? ยังไม่ยืนยัน</span>
+);
+
+// ── Price Trend SVG Chart ─────────────────────────────────────────────────────
+const PriceTrendChart = ({ entries }) => {
+  const valid = (entries||[]).filter(e=>e.price&&e.date&&e.store);
+  if (valid.length < 2) return (
+    <div style={{textAlign:'center',color:C.muted,padding:'20px 0',fontSize:12}}>
+      ต้องมีข้อมูลราคาอย่างน้อย 2 วันขึ้นไปเพื่อแสดง trend
     </div>
-  </div>
-);
+  );
 
-const Grid2 = ({ children, style }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, ...style }}>{children}</div>
-);
+  const W=580, H=210;
+  const PAD={t:14,r:90,b:38,l:58};
+  const cW=W-PAD.l-PAD.r, cH=H-PAD.t-PAD.b;
 
-const FLabel = ({ children }) => (
-  <div style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginBottom: 4, textTransform: 'uppercase', letterSpacing: .5 }}>{children}</div>
-);
+  const sorted=[...valid].sort((a,b)=>a.date.localeCompare(b.date));
+  const dates=[...new Set(sorted.map(e=>e.date))].sort();
+  const stores=[...new Set(sorted.map(e=>e.store))];
+
+  const allP=sorted.map(e=>e.price);
+  const minP=Math.min(...allP), maxP=Math.max(...allP);
+  const pad=(maxP-minP)*0.12||1000;
+  const lo=minP-pad, hi=maxP+pad;
+
+  const xOf = i => PAD.l+(dates.length>1?(i/(dates.length-1))*cW:cW/2);
+  const yOf = p => PAD.t+(1-(p-lo)/(hi-lo))*cH;
+
+  const yTicks=4;
+  const yStep=(hi-lo)/yTicks;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'auto',overflow:'visible'}}>
+        {/* Chart background */}
+        <rect x={PAD.l} y={PAD.t} width={cW} height={cH} fill="#f8fafc" rx={4}/>
+        {/* Grid */}
+        {Array.from({length:yTicks+1},(_,i)=>{
+          const p=lo+i*yStep, y=yOf(p);
+          return (
+            <g key={i}>
+              <line x1={PAD.l} y1={y} x2={PAD.l+cW} y2={y} stroke="#e2e8f0" strokeWidth={i===0?1.5:1} strokeDasharray={i>0&&i<yTicks?"3,3":""}/>
+              <text x={PAD.l-6} y={y+4} textAnchor="end" fontSize={10} fill="#94a3b8">
+                ฿{(p/1000).toFixed(0)}K
+              </text>
+            </g>
+          );
+        })}
+        {/* X labels */}
+        {dates.map((d,i)=>{
+          if(dates.length>6&&i%2!==0&&i!==dates.length-1) return null;
+          return <text key={d} x={xOf(i)} y={H-8} textAnchor="middle" fontSize={9} fill="#94a3b8">{d.slice(5).replace('-','/')}</text>;
+        })}
+        {/* Store lines */}
+        {stores.map(store=>{
+          const color=STORE_COLORS[store]||'#94a3b8';
+          const pts=[];
+          dates.forEach((d,i)=>{
+            const m=sorted.filter(e=>e.store===store&&e.date===d);
+            if(m.length) pts.push({x:xOf(i),y:yOf(m[0].price),price:m[0].price,d,verified:m[0].verified});
+          });
+          if(!pts.length) return null;
+          return (
+            <g key={store}>
+              {pts.length>1&&<polyline points={pts.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>}
+              {pts.map((pt,i)=>(
+                <g key={i}>
+                  <circle cx={pt.x} cy={pt.y} r={pt.verified?4.5:3.5} fill={color} stroke="#fff" strokeWidth={2}/>
+                  {!pt.verified&&<circle cx={pt.x} cy={pt.y} r={5.5} fill="none" stroke={color} strokeWidth={1} strokeDasharray="2,2"/>}
+                  {i===pts.length-1&&(
+                    <>
+                      <rect x={pt.x+8} y={pt.y-11} width={64} height={20} rx={4} fill={color} opacity={.92}/>
+                      <text x={pt.x+12} y={pt.y+2} fontSize={10} fill="#fff" fontWeight="700">฿{(pt.price/1000).toFixed(1)}K</text>
+                    </>
+                  )}
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+      {/* Legend */}
+      <div style={{display:'flex',gap:14,flexWrap:'wrap',marginTop:6,paddingLeft:PAD.l}}>
+        {stores.filter(s=>valid.some(e=>e.store===s)).map(s=>(
+          <div key={s} style={{display:'flex',alignItems:'center',gap:5,fontSize:11}}>
+            <div style={{width:20,height:3,borderRadius:2,background:STORE_COLORS[s]||'#94a3b8'}}/>
+            <span style={{color:C.sub}}>{s}</span>
+          </div>
+        ))}
+        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:C.muted}}>
+          <span>○ ยังไม่ยืนยัน</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Promo Intensity Section ───────────────────────────────────────────────────
+const PromoSection = ({ prices, product }) => {
+  const entries = product&&product!=='all' ? prices.filter(p=>p.product===product) : prices;
+  const { data: wkData, cur, baseline, alertLevel } = useMemo(()=>getPromoTrend(entries),[entries]);
+
+  if (!wkData.length) return (
+    <div style={{fontSize:12,color:C.muted,textAlign:'center',padding:'12px 0'}}>
+      เพิ่มข้อมูล promoScore เพื่อดู promo intensity trend
+    </div>
+  );
+
+  const maxBar=5, barH=48;
+  const isHigh = alertLevel >= 1.25;
+  const isVeryHigh = alertLevel >= 1.5;
+
+  // Find store with highest promo this week
+  let topStore='', topScore=0;
+  if(cur&&cur.entries){
+    const byStore={};
+    cur.entries.forEach(e=>{byStore[e.store]=(byStore[e.store]||0)+e.score;});
+    Object.entries(byStore).forEach(([s,v])=>{if(v>topScore){topScore=v;topStore=s;}});
+  }
+
+  return (
+    <div>
+      {(isHigh||isVeryHigh)&&(
+        <div style={{padding:'10px 14px',borderRadius:8,background:isVeryHigh?'#fee2e2':'#fff7ed',border:`1px solid ${isVeryHigh?'#fca5a5':'#fed7aa'}`,marginBottom:12,fontSize:13}}>
+          <span style={{fontWeight:700,color:isVeryHigh?'#dc2626':'#ea580c'}}>
+            {isVeryHigh?'🔥 โปรสัปดาห์นี้สูงผิดปกติมาก':'⚠️ โปรสัปดาห์นี้ดีกว่าปกติ'}
+          </span>
+          <span style={{color:C.sub,marginLeft:8}}>
+            +{Math.round((alertLevel-1)*100)}% vs baseline {baseline?.toFixed(1)}
+            {topStore&&<span> · <strong>{topStore}</strong> ทำโปรแรงที่สุด</span>}
+          </span>
+        </div>
+      )}
+      {/* Bar chart */}
+      <div style={{display:'flex',gap:6,alignItems:'flex-end',height:barH+20}}>
+        {wkData.map((w,i)=>{
+          const h=Math.max(4,(w.avg/maxBar)*barH);
+          const pl=PROMO_LEVELS.find(l=>l.v===Math.round(w.avg))||PROMO_LEVELS[2];
+          const isCurrent=i===wkData.length-1;
+          return (
+            <div key={w.week} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+              {isCurrent&&<div style={{fontSize:9,fontWeight:700,color:C.indigo}}>สัปดาห์นี้</div>}
+              <div style={{width:'100%',height:h,background:isCurrent?(isVeryHigh?'#dc2626':isHigh?'#ea580c':C.indigo):pl.color,borderRadius:'3px 3px 0 0',opacity:isCurrent?1:.7,title:w.week,transition:'height .3s'}}/>
+              <div style={{fontSize:9,color:C.muted,textAlign:'center'}}>{w.week.slice(5).replace('-','/')}</div>
+            </div>
+          );
+        })}
+      </div>
+      {baseline&&(
+        <div style={{fontSize:11,color:C.muted,marginTop:6}}>
+          Baseline เฉลี่ย {baseline.toFixed(1)}/5 · สัปดาห์นี้ {cur?.avg.toFixed(1)}/5
+          <span style={{marginLeft:12,display:'inline-flex',gap:6}}>
+            {PROMO_LEVELS.map(l=>(
+              <span key={l.v}>{l.emoji} {l.label}</span>
+            ))}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Traffic Composite Card ────────────────────────────────────────────────────
+const TrafficCompositeCard = ({ traffic }) => {
+  const { score, confidence, breakdown } = useMemo(()=>calcTrafficComposite(traffic||[]),[traffic]);
+  const color = score>=65?'#10b981':score>=35?'#f59e0b':'#ef4444';
+  const verifiedCount = breakdown.filter(b=>b.verified).length;
+
+  return (
+    <Card>
+      <SH title="Traffic Composite Score" sub={`${breakdown.length} แหล่งข้อมูล · ยืนยันแล้ว ${verifiedCount}/${breakdown.length} · Confidence ${confidence}%`}/>
+      <div style={{display:'flex',gap:24,alignItems:'center',marginBottom:16}}>
+        <div style={{textAlign:'center',flexShrink:0}}>
+          {score===null ? (
+            <div style={{fontSize:13,color:C.muted}}>ไม่มีข้อมูล<br/>30 วันล่าสุด</div>
+          ) : (
+            <>
+              <div style={{fontSize:48,fontWeight:800,color,lineHeight:1,fontFamily:'DM Mono,monospace'}}>{score}</div>
+              <div style={{fontSize:11,color:C.muted,marginTop:2}}>/100</div>
+            </>
+          )}
+        </div>
+        <div style={{flex:1}}>
+          {/* Confidence bar */}
+          <div style={{fontSize:11,color:C.sub,marginBottom:4}}>Confidence (ข้อมูลครบ {confidence}%)</div>
+          <div style={{height:6,background:'#e2e8f0',borderRadius:3,marginBottom:10}}>
+            <div style={{height:'100%',width:`${confidence}%`,background:confidence>=60?'#10b981':'#f59e0b',borderRadius:3}}/>
+          </div>
+          {/* Source bars */}
+          {breakdown.map(b=>(
+            <div key={b.src} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <div style={{fontSize:11,color:C.sub,width:120,flexShrink:0}}>{b.label}</div>
+              <div style={{flex:1,height:6,background:'#e2e8f0',borderRadius:3,overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${b.norm}%`,background:b.norm>=65?'#10b981':b.norm>=35?'#f59e0b':'#ef4444',borderRadius:3}}/>
+              </div>
+              <div style={{fontSize:11,fontFamily:'DM Mono,monospace',color:C.sub,width:52,textAlign:'right'}}>{fmtN(b.value)}{b.unit.split('/')[0]&&b.unit.includes('/')?'':' '}</div>
+              <VBadge verified={b.verified} small/>
+              <div style={{fontSize:10,color:C.muted,width:50,flexShrink:0,textAlign:'right'}}>{fmtDate(b.date)}</div>
+            </div>
+          ))}
+          {breakdown.length===0&&<div style={{fontSize:12,color:C.muted}}>เพิ่มข้อมูล traffic เพื่อคำนวณ composite score</div>}
+        </div>
+      </div>
+      <div style={{padding:'8px 12px',background:'#eff6ff',borderRadius:8,border:'1px solid #bfdbfe',fontSize:11,color:'#1e40af'}}>
+        💡 <strong>สูตรคำนวณ:</strong> Google Trends ×35% + SimilarWeb ×30% + App Downloads ×20% + Google Reviews ×15% + Shopee ×10% + Manual ×5% → normalized 0-100
+      </div>
+    </Card>
+  );
+};
 
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 const OverviewTab = ({ data, stock }) => {
   const sd = data.stocks[stock] || mkStock();
   const sentScore  = calcSentScore(sd.sentiments);
-  const newsScore  = calcSentScore(sd.news);
-  const priceCount = (sd.prices || []).length;
-  const traffLast  = (sd.traffic || []).slice(-1)[0];
-  let trafficScore = null;
-  if (traffLast) {
-    const v = Number(traffLast.value);
-    trafficScore = v >= 65 ? 60 : v >= 35 ? 10 : -60;
-  }
+  const newsScore  = calcSentScore((sd.news||[]).map(n=>({...n,feedbackCount:1})));
+  const { score: trafficScore, confidence } = useMemo(()=>calcTrafficComposite(sd.traffic||[]),[sd.traffic]);
+  const trafficSignal = trafficScore===null?null:trafficScore>=65?60:trafficScore>=35?10:-50;
 
-  const signals = [sentScore, newsScore, trafficScore].filter(s => s !== null);
-  const overall  = signals.length ? Math.round(signals.reduce((a, b) => a + b, 0) / signals.length) : null;
+  const signals=[sentScore,newsScore,trafficSignal].filter(s=>s!==null);
+  const overall = signals.length ? Math.round(signals.reduce((a,b)=>a+b,0)/signals.length) : null;
 
-  const components = [
-    { label: 'Sentiment ลูกค้า', icon: '💬', score: sentScore,  count: sd.sentiments?.length || 0, desc: 'Pantip · FB · Google Reviews' },
-    { label: 'ข่าวสาร & Media', icon: '📰', score: newsScore,  count: sd.news?.length || 0,        desc: 'สำนักข่าว · Social Media' },
-    { label: 'ราคา & โปร',     icon: '💰', score: priceCount ? (priceCount >= 3 ? 30 : 10) : null, count: priceCount, desc: 'ข้อมูลราคาสินค้าเทียบคู่แข่ง' },
-    { label: 'Store Traffic',  icon: '📈', score: trafficScore, count: sd.traffic?.length || 0,    desc: 'Google Trends · SimilarWeb' },
-  ];
+  const verTotal = [...(sd.sentiments||[]),...(sd.news||[]),...(sd.prices||[]),...(sd.traffic||[])].length;
+  const verVerified = [...(sd.sentiments||[]),...(sd.news||[]),...(sd.prices||[]),...(sd.traffic||[])].filter(x=>x.verified).length;
+  const dqPct = verTotal ? Math.round(verVerified/verTotal*100) : 0;
 
   return (
-    <div style={{ display: 'grid', gap: 20, animation: 'fadeUp .2s ease' }}>
-      {/* Overall Signal */}
+    <div style={{display:'grid',gap:20,animation:'fadeUp .2s ease'}}>
       <Card>
-        <SH title={`สัญญาณรวม · ${stock}`} sub="Weighted signal รวมจากทุกแหล่งข้อมูล" right={<SignalBadge score={overall} size="lg" />} />
-        <Gauge score={overall} />
-        {overall !== null && (
-          <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>
-            คำนวณจาก {signals.length} มิติ · ยิ่งมีข้อมูลมากยิ่งแม่นยำขึ้น
+        <SH title={`สัญญาณรวม · ${stock}`} sub="Weighted signal รวมจากทุกแหล่ง" right={<SignalBadge score={overall} size="lg"/>}/>
+        <Gauge score={overall}/>
+        {/* Data Quality */}
+        <div style={{marginTop:14,padding:'10px 14px',background:'#f8fafc',borderRadius:8,border:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.sub}}>คุณภาพข้อมูล</div>
+          <div style={{flex:1,height:6,background:'#e2e8f0',borderRadius:3,overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${dqPct}%`,background:dqPct>=70?'#10b981':dqPct>=40?'#f59e0b':'#ef4444',borderRadius:3}}/>
           </div>
-        )}
+          <div style={{fontSize:12,fontWeight:700,color:dqPct>=70?'#059669':C.sub}}>{dqPct}% ยืนยันแล้ว ({verVerified}/{verTotal})</div>
+        </div>
       </Card>
 
-      {/* Component Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14 }}>
-        {components.map(c => (
-          <Card key={c.label} style={{ padding: 16 }}>
-            <div style={{ fontSize: 24, marginBottom: 6 }}>{c.icon}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{c.label}</div>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>{c.desc}</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <SignalBadge score={c.score} />
-              <span style={{ fontSize: 11, color: C.muted }}>{c.count} รายการ</span>
-            </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14}}>
+        {[
+          {label:'Sentiment ลูกค้า',icon:'💬',score:sentScore,count:(sd.sentiments||[]).length,desc:'Pantip · FB · Google Reviews'},
+          {label:'ข่าวสาร & Media',icon:'📰',score:newsScore,count:(sd.news||[]).length,desc:'สำนักข่าว · Social Media'},
+          {label:'ราคา & โปร',icon:'💰',score:(sd.prices||[]).length>=3?25:null,count:(sd.prices||[]).length,desc:'ติดตามราคาสินค้า'},
+          {label:'Store Traffic',icon:'📈',score:trafficScore===null?null:trafficScore-50,count:(sd.traffic||[]).length,desc:`Composite ${confidence}% confidence`},
+        ].map(c=>(
+          <Card key={c.label} style={{padding:16}}>
+            <div style={{fontSize:24,marginBottom:6}}>{c.icon}</div>
+            <div style={{fontSize:13,fontWeight:700,marginBottom:2}}>{c.label}</div>
+            <div style={{fontSize:11,color:C.muted,marginBottom:10}}>{c.desc} · {c.count} รายการ</div>
+            <SignalBadge score={c.score}/>
           </Card>
         ))}
       </div>
 
-      {/* Best Practices */}
       <Card>
-        <SH title="🏆 Best Practices — Alternative Data ที่กองทุนใหญ่ใช้" sub="สำหรับ IT Retail Stocks เช่น ADVICE, COM7, JMART" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(270px,1fr))', gap: 14 }}>
+        <SH title="🏆 Best Practices — Alternative Data ที่กองทุนใหญ่ใช้" sub="สำหรับ IT Retail Stocks เช่น ADVICE, COM7, JMART"/>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(265px,1fr))',gap:14}}>
           {[
-            {
-              tier: 'Free / เริ่มต้น', color: '#10b981', bg: '#d1fae5',
-              items: [
-                '🔍 Google Trends — proxy ของ consumer demand (ทำได้เลย)',
-                '💬 Pantip · Blockdit — sentiment Thai ที่น่าเชื่อถือสูง',
-                '🛒 Shopee / Lazada Sales Rank — proxy ยอดขาย online',
-                '⭐ Google Maps Reviews — ความพึงพอใจรายสาขา',
-                '📱 App Store Rating & Reviews — brand health',
-                '💼 LinkedIn Job Posts — สัญญาณการขยายธุรกิจ',
-              ],
-            },
-            {
-              tier: 'ราคาปานกลาง', color: '#f59e0b', bg: '#fef3c7',
-              items: [
-                '🌐 SimilarWeb — web traffic เทียบคู่แข่งรายเดือน',
-                '📲 Sensor Tower / AppFollow — app downloads & ranking',
-                '🕷️ Price Scraping — ติดตามราคาสินค้าอัตโนมัติ',
-                '📰 NewsAPI / GNews — news sentiment NLP',
-                '🔎 SEMrush — keyword trends & brand search volume',
-                '📊 Brandwatch — social mention tracking',
-              ],
-            },
-            {
-              tier: 'Institutional Fund', color: '#6366f1', bg: '#ede9fe',
-              items: [
-                '🤖 Ravenpack / Bloomberg NLP — news sentiment AI grade',
-                '📍 SafeGraph / Veraset — GPS foot traffic data',
-                '💳 Bloomberg Second Measure — credit card spending',
-                '🛍️ YipitData — ecommerce sales web scraping',
-                '🛰️ Orbital Insight — satellite นับรถจอดในที่จอดรถ',
-                '🚢 Panjiva — supply chain import/export สัญญาณ demand',
-              ],
-            },
-          ].map(({ tier, color, bg, items }) => (
-            <div key={tier} style={{ border: `1px solid ${color}30`, borderRadius: 12, padding: 14, background: bg + '25' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color, marginBottom: 10,
-                textTransform: 'uppercase', letterSpacing: 1 }}>{tier}</div>
-              {items.map(item => (
-                <div key={item} style={{ fontSize: 12, color: C.sub, marginBottom: 7, paddingLeft: 8,
-                  borderLeft: `2px solid ${color}80`, lineHeight: 1.5 }}>{item}</div>
-              ))}
+            {tier:'Free / เริ่มต้น',color:'#10b981',bg:'#d1fae5',items:['🔍 Google Trends — proxy consumer demand (ทำได้เลย)','💬 Pantip · Blockdit — sentiment ไทยที่น่าเชื่อถือสูง','🛒 Shopee / Lazada Sales Rank — proxy ยอดขาย online','⭐ Google Maps Reviews — ความพึงพอใจรายสาขา','📱 App Store Rating — brand health','💼 LinkedIn Job Posts — สัญญาณการขยายธุรกิจ']},
+            {tier:'ราคาปานกลาง',color:'#f59e0b',bg:'#fef3c7',items:['🌐 SimilarWeb — web traffic เทียบคู่แข่ง','📲 Sensor Tower — app downloads & rankings','🕷️ Price Scraping — ติดตามราคาอัตโนมัติ','📰 NewsAPI / Alpha Vantage — news sentiment NLP','🔎 SEMrush — keyword trends & organic traffic']},
+            {tier:'Institutional Fund',color:'#6366f1',bg:'#ede9fe',items:['🤖 Ravenpack / Bloomberg NLP — AI news sentiment','📍 SafeGraph / Veraset — GPS foot traffic จริง','💳 Bloomberg Second Measure — credit card spend','🛍️ YipitData — ecommerce web scraping','🛰️ Orbital Insight — satellite นับรถที่จอดรถ']},
+          ].map(({tier,color,bg,items})=>(
+            <div key={tier} style={{border:`1px solid ${color}30`,borderRadius:12,padding:14,background:bg+'25'}}>
+              <div style={{fontSize:11,fontWeight:800,color,marginBottom:10,textTransform:'uppercase',letterSpacing:1}}>{tier}</div>
+              {items.map(item=><div key={item} style={{fontSize:12,color:C.sub,marginBottom:7,paddingLeft:8,borderLeft:`2px solid ${color}80`,lineHeight:1.5}}>{item}</div>)}
             </div>
           ))}
-        </div>
-      </Card>
-
-      {/* Source Credibility Guide */}
-      <Card>
-        <SH title="📊 Credibility Guide — น้ำหนักของแต่ละแหล่งข้อมูล"
-          sub="ระบบคูณ credibility score × จำนวน feedback เพื่อถ่วงน้ำหนัก weighted sentiment" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 8 }}>
-          {Object.entries(SOURCES).map(([k, src]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
-              <span style={{ fontSize: 18 }}>{src.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>{src.label}</div>
-                <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
-                  {[1,2,3,4,5].map(i => (
-                    <div key={i} style={{ width: 10, height: 4, borderRadius: 2,
-                      background: i <= src.cred ? src.color : C.border }} />
-                  ))}
-                </div>
-              </div>
-              <span style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>{src.cred}/5</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 14, padding: '10px 14px', background: '#eff6ff',
-          borderRadius: 8, border: '1px solid #bfdbfe', fontSize: 12, color: '#1e40af' }}>
-          💡 <strong>ตัวอย่างการถ่วงน้ำหนัก:</strong> กระทู้ Pantip (cred 4) มี 50 ความคิดเห็น → weight = 200 · โพสต์ FB Group (cred 2) มี 5 comment → weight = 10 · Pantip มีผลต่อ score มากกว่า 20×
         </div>
       </Card>
     </div>
   );
 };
 
-// ── Price Monitor Tab ─────────────────────────────────────────────────────────
+// ── Price Tab ─────────────────────────────────────────────────────────────────
 const PriceTab = ({ data, setData, stock }) => {
   const [showForm, setShowForm] = useState(false);
-  const [filterProd, setFilterProd] = useState('all');
+  const [viewProd, setViewProd] = useState('all');
   const [form, setForm] = useState({
-    product: '', store: STORES[0], price: '', promo: '',
-    warranty: '', url: '', date: today(), note: '',
+    product:'',store:STORES[0],price:'',promoScore:'3',promo:'',warranty:'',url:'',date:today(),note:'',verified:false,
   });
 
   const sd     = data.stocks[stock] || mkStock();
   const prices = sd.prices || [];
-  const prods  = [...new Set(prices.map(p => p.product))];
-  const filtered = filterProd === 'all' ? prices : prices.filter(p => p.product === filterProd);
+  const prods  = [...new Set(prices.map(p=>p.product))];
 
-  const addPrice = () => {
-    const p = parseFloat(form.price);
-    if (!form.product.trim() || !p) return;
-    const updated = { ...data };
-    if (!updated.stocks[stock]) updated.stocks[stock] = mkStock();
-    updated.stocks[stock] = {
-      ...updated.stocks[stock],
-      prices: [...(updated.stocks[stock].prices || []), { ...form, id: uid(), price: p }],
-    };
+  // Top 3 by entry count
+  const top3 = useMemo(()=>{
+    const cnt={};
+    prices.forEach(p=>{ cnt[p.product]=(cnt[p.product]||0)+1; });
+    return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0]);
+  },[prices]);
+
+  const filtered = viewProd==='all' ? prices : prices.filter(p=>p.product===viewProd);
+  const grouped  = {};
+  filtered.forEach(p=>{ if(!grouped[p.product]) grouped[p.product]=[]; grouped[p.product].push(p); });
+
+  const add = () => {
+    const p=parseFloat(form.price);
+    if(!form.product.trim()||!p) return;
+    const updated={...data};
+    if(!updated.stocks[stock]) updated.stocks[stock]=mkStock();
+    updated.stocks[stock].prices=[...(updated.stocks[stock].prices||[]),{...form,id:uid(),price:p,promoScore:Number(form.promoScore)||3}];
     setData(updated); saveData(updated);
     setShowForm(false);
-    setForm(f => ({ ...f, price: '', promo: '', warranty: '', url: '', note: '' }));
+    setForm(f=>({...f,price:'',promo:'',warranty:'',url:'',note:'',verified:false}));
   };
 
   const del = id => {
-    const updated = { ...data };
-    updated.stocks[stock].prices = updated.stocks[stock].prices.filter(p => p.id !== id);
+    const updated={...data};
+    updated.stocks[stock].prices=updated.stocks[stock].prices.filter(p=>p.id!==id);
     setData(updated); saveData(updated);
   };
 
-  // Group by product for comparison table
-  const grouped = {};
-  filtered.forEach(p => {
-    if (!grouped[p.product]) grouped[p.product] = [];
-    grouped[p.product].push(p);
-  });
+  const toggleVerify = id => {
+    const updated={...data};
+    updated.stocks[stock].prices=updated.stocks[stock].prices.map(p=>p.id===id?{...p,verified:!p.verified}:p);
+    setData(updated); saveData(updated);
+  };
+
+  const chartEntries = viewProd!=='all' ? prices.filter(p=>p.product===viewProd) : (top3.length?prices.filter(p=>p.product===top3[0]):[]);
 
   return (
-    <div style={{ display: 'grid', gap: 20, animation: 'fadeUp .2s ease' }}>
+    <div style={{display:'grid',gap:20,animation:'fadeUp .2s ease'}}>
+      {/* Trend Chart */}
+      {prices.length>=2&&(
+        <Card>
+          <SH title="Price Trend Chart" sub={`${viewProd==='all'?`Top 1: ${top3[0]||'–'}`:viewProd} · เส้นทึบ=ยืนยันแล้ว, เส้นประ=ยังไม่ยืนยัน`}
+            right={
+              <Sel value={viewProd} onChange={setViewProd} style={{width:'auto',minWidth:180}}>
+                <option value="all">ทุกสินค้า (แสดง #{top3[0]})</option>
+                {prods.map(p=><option key={p} value={p}>{p}</option>)}
+              </Sel>
+            }
+          />
+          <PriceTrendChart entries={chartEntries}/>
+        </Card>
+      )}
+
+      {/* Promo Intensity */}
+      {prices.length>0&&(
+        <Card>
+          <SH title="Promo Intensity Tracker" sub="สัปดาห์ที่มีโปรแรงกว่าปกติ = สัญญาณแข่งขันสูง"/>
+          <PromoSection prices={prices} product={viewProd==='all'?null:viewProd}/>
+        </Card>
+      )}
+
+      {/* Price Table */}
       <Card>
-        <SH title="ราคา & โปรโมชั่น" sub={`${stock} · ${prices.length} รายการ · เปรียบเทียบร้านค้า`}
+        <SH title="ตารางราคาเปรียบเทียบ"
+          sub={`${stock} · ${prices.length} รายการ · ยืนยัน ${prices.filter(p=>p.verified).length}/${prices.length}`}
           right={<>
-            <Sel value={filterProd} onChange={setFilterProd} style={{ width: 'auto', minWidth: 140 }}>
-              <option value="all">ทุกสินค้า ({prices.length})</option>
-              {prods.map(p => <option key={p} value={p}>{p}</option>)}
+            <Sel value={viewProd} onChange={setViewProd} style={{width:'auto',minWidth:160}}>
+              <option value="all">ทุกสินค้า</option>
+              {prods.map(p=><option key={p} value={p}>{p}</option>)}
             </Sel>
-            <Btn onClick={() => setShowForm(v => !v)} sm>{showForm ? '✕ ยกเลิก' : '+ เพิ่มราคา'}</Btn>
+            <Btn onClick={()=>setShowForm(v=>!v)} sm>{showForm?'✕ ยกเลิก':'+ เพิ่ม'}</Btn>
           </>}
         />
 
-        {showForm && (
-          <FormBox title="เพิ่มข้อมูลราคา" onSave={addPrice} onCancel={() => setShowForm(false)}>
-            <Grid2>
-              <div>
+        {/* Top 3 pills */}
+        {top3.length>0&&(
+          <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
+            <span style={{fontSize:11,color:C.muted,alignSelf:'center'}}>ขายดีสุด:</span>
+            {top3.map((p,i)=>(
+              <button key={p} onClick={()=>setViewProd(p)}
+                style={{fontSize:11,padding:'3px 10px',borderRadius:999,border:`1px solid ${[C.indigo,'#10b981','#f59e0b'][i]}`,
+                  background:viewProd===p?[C.indigo,'#10b981','#f59e0b'][i]:'transparent',
+                  color:viewProd===p?'#fff':[C.indigo,'#10b981','#f59e0b'][i],cursor:'pointer',fontWeight:700,fontFamily:'inherit'}}>
+                #{i+1} {p.split(' ').slice(0,2).join(' ')}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showForm&&(
+          <div style={{background:'#f8fafc',border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:20,animation:'fadeUp .15s ease'}}>
+            <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>เพิ่มข้อมูลราคา</div>
+            <G2>
+              <div style={{gridColumn:'1/-1'}}>
                 <FLabel>สินค้า *</FLabel>
-                <Inp value={form.product} onChange={v => setForm(f => ({ ...f, product: v }))}
-                  placeholder="เช่น iPhone 17 128GB" />
-                {data.config.products.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                    {data.config.products.map(p => (
-                      <button key={p} onClick={() => setForm(f => ({ ...f, product: p }))}
-                        style={{ fontSize: 10, padding: '2px 8px', border: `1px solid ${C.border}`,
-                          borderRadius: 999, background: form.product === p ? C.indigo : '#f8fafc',
-                          color: form.product === p ? '#fff' : C.sub, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <Inp value={form.product} onChange={v=>setForm(f=>({...f,product:v}))} placeholder="เช่น iPhone 17 128GB"/>
+                <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}}>
+                  {data.config.products.map(p=>(
+                    <button key={p} onClick={()=>setForm(f=>({...f,product:p}))}
+                      style={{fontSize:10,padding:'2px 8px',border:`1px solid ${C.border}`,borderRadius:999,
+                        background:form.product===p?C.indigo:'#f8fafc',color:form.product===p?'#fff':C.sub,cursor:'pointer',fontFamily:'inherit'}}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <FLabel>ร้านค้า</FLabel>
-                <Sel value={form.store} onChange={v => setForm(f => ({ ...f, store: v }))}>
-                  {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+                <Sel value={form.store} onChange={v=>setForm(f=>({...f,store:v}))}>
+                  {STORES.map(s=><option key={s} value={s}>{s}</option>)}
                 </Sel>
               </div>
               <div>
                 <FLabel>ราคา (บาท) *</FLabel>
-                <Inp type="number" value={form.price} onChange={v => setForm(f => ({ ...f, price: v }))}
-                  placeholder="35900" />
+                <Inp type="number" value={form.price} onChange={v=>setForm(f=>({...f,price:v}))} placeholder="35900"/>
+              </div>
+              <div>
+                <FLabel>โปร Intensity (1–5)</FLabel>
+                <Sel value={form.promoScore} onChange={v=>setForm(f=>({...f,promoScore:v}))}>
+                  {PROMO_LEVELS.map(l=><option key={l.v} value={l.v}>{l.emoji} {l.v} – {l.label}</option>)}
+                </Sel>
               </div>
               <div>
                 <FLabel>วันที่</FLabel>
-                <Inp type="date" value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} />
+                <Inp type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))}/>
               </div>
               <div>
                 <FLabel>โปรโมชั่น</FLabel>
-                <Inp value={form.promo} onChange={v => setForm(f => ({ ...f, promo: v }))}
-                  placeholder="เช่น ผ่อน 0% 10 เดือน" />
+                <Inp value={form.promo} onChange={v=>setForm(f=>({...f,promo:v}))} placeholder="เช่น ผ่อน 0% 10 เดือน"/>
               </div>
               <div>
                 <FLabel>ประกัน</FLabel>
-                <Inp value={form.warranty} onChange={v => setForm(f => ({ ...f, warranty: v }))}
-                  placeholder="เช่น 1 ปีศูนย์ + 1 ปีร้าน" />
+                <Inp value={form.warranty} onChange={v=>setForm(f=>({...f,warranty:v}))} placeholder="เช่น 1 ปีศูนย์+1 ปีร้าน"/>
               </div>
-              <div style={{ gridColumn: '1/-1' }}>
+              <div style={{gridColumn:'1/-1'}}>
                 <FLabel>URL สินค้า</FLabel>
-                <Inp value={form.url} onChange={v => setForm(f => ({ ...f, url: v }))}
-                  placeholder="https://www.advice.co.th/..." />
+                <Inp value={form.url} onChange={v=>setForm(f=>({...f,url:v}))} placeholder="https://..."/>
               </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <FLabel>หมายเหตุ</FLabel>
-                <Inp value={form.note} onChange={v => setForm(f => ({ ...f, note: v }))}
-                  placeholder="เงื่อนไข บังคับซื้อประกัน ฯลฯ" />
+              <div style={{gridColumn:'1/-1',display:'flex',alignItems:'center',gap:10}}>
+                <input type="checkbox" id="ver" checked={!!form.verified} onChange={e=>setForm(f=>({...f,verified:e.target.checked}))} style={{width:16,height:16,accentColor:C.indigo}}/>
+                <label htmlFor="ver" style={{fontSize:13,cursor:'pointer'}}>✓ ข้อมูลนี้ผ่านการตรวจสอบแล้ว (เช็คจากแหล่งอ้างอิงโดยตรง)</label>
               </div>
-            </Grid2>
-          </FormBox>
+            </G2>
+            <div style={{marginTop:14,display:'flex',gap:8}}>
+              <Btn onClick={add}>💾 บันทึก</Btn>
+              <Btn onClick={()=>setShowForm(false)} v="ghost">ยกเลิก</Btn>
+            </div>
+          </div>
         )}
 
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: C.muted, padding: '40px 0', fontSize: 13 }}>
-            ยังไม่มีข้อมูลราคา · กด <strong>+ เพิ่มราคา</strong> เพื่อเริ่มต้น
-          </div>
+        {filtered.length===0 ? (
+          <div style={{textAlign:'center',color:C.muted,padding:'40px 0',fontSize:13}}>ยังไม่มีข้อมูลราคา</div>
         ) : (
-          Object.entries(grouped).map(([prod, rows]) => {
-            const allPrices  = rows.map(r => r.price);
-            const minPrice   = Math.min(...allPrices);
-            const maxPrice   = Math.max(...allPrices);
-            const spread     = maxPrice - minPrice;
-            const spreadPct  = minPrice > 0 ? ((spread / minPrice) * 100).toFixed(1) : 0;
+          Object.entries(grouped).map(([prod,rows])=>{
+            const allP=rows.map(r=>r.price), minP=Math.min(...allP), maxP=Math.max(...allP);
+            const spread=maxP-minP;
             return (
-              <div key={prod} style={{ marginBottom: 28 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, padding: '7px 14px',
-                  background: '#f1f5f9', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={prod} style={{marginBottom:24}}>
+                <div style={{fontSize:13,fontWeight:700,padding:'7px 14px',background:'#f1f5f9',borderRadius:8,marginBottom:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <span>📱 {prod}</span>
-                  {spread > 0 && (
-                    <span style={{ fontSize: 11, color: C.sub }}>
-                      ราคาต่างกัน <strong>฿{fmtN(spread)}</strong> ({spreadPct}%)
-                    </span>
-                  )}
+                  {spread>0&&<span style={{fontSize:11,color:C.sub}}>ราคาต่างกัน <strong>฿{fmtN(spread)}</strong> ({((spread/minP)*100).toFixed(1)}%)</span>}
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <div style={{overflowX:'auto'}}>
+                  <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                     <thead>
                       <tr>
-                        {['ร้าน', 'ราคา', 'โปร', 'ประกัน', 'วันที่', 'หมายเหตุ', ''].map(h => (
-                          <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: C.muted,
-                            fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${C.border}`,
-                            whiteSpace: 'nowrap', background: '#fff' }}>{h}</th>
+                        {['ร้าน','ราคา','โปร Intensity','โปรโมชั่น','ประกัน','วันที่','สถานะ',''].map(h=>(
+                          <th key={h} style={{padding:'8px 10px',textAlign:'left',color:C.muted,fontWeight:600,fontSize:11,borderBottom:`1px solid ${C.border}`,whiteSpace:'nowrap',background:'#fff'}}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.sort((a, b) => a.price - b.price).map(r => (
-                        <tr key={r.id} style={{ borderBottom: `1px solid #f1f5f9` }}>
-                          <td style={{ padding: '10px 12px', fontWeight: 600 }}>{r.store}</td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <span style={{ fontWeight: 800, fontFamily: 'DM Mono,monospace',
-                              color: r.price === minPrice ? '#059669' : C.text }}>
-                              ฿{fmtN(r.price)}
-                            </span>
-                            {r.price === minPrice && rows.length > 1 && (
-                              <span style={{ marginLeft: 6, fontSize: 10, background: '#d1fae5',
-                                color: '#059669', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>ถูกสุด</span>
-                            )}
-                          </td>
-                          <td style={{ padding: '10px 12px', color: r.promo ? C.indigo : C.muted }}>{r.promo || '–'}</td>
-                          <td style={{ padding: '10px 12px', color: C.sub }}>{r.warranty || '–'}</td>
-                          <td style={{ padding: '10px 12px', color: C.muted, whiteSpace: 'nowrap', fontSize: 11 }}>{fmtDate(r.date)}</td>
-                          <td style={{ padding: '10px 12px', color: C.muted, fontSize: 11 }}>{r.note || '–'}</td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer"
-                                style={{ fontSize: 11, color: C.indigo, textDecoration: 'none' }}>↗ ลิงก์</a>}
-                              <button onClick={() => del(r.id)}
-                                style={{ fontSize: 11, color: '#ef4444', background: 'none',
-                                  border: 'none', cursor: 'pointer', padding: 0 }}>ลบ</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {rows.sort((a,b)=>a.price-b.price).map(r=>{
+                        const pl=PROMO_LEVELS.find(l=>l.v===Number(r.promoScore))||PROMO_LEVELS[2];
+                        return (
+                          <tr key={r.id} style={{borderBottom:`1px solid #f1f5f9`}}>
+                            <td style={{padding:'10px 10px',fontWeight:600}}>{r.store}</td>
+                            <td style={{padding:'10px 10px'}}>
+                              <span style={{fontWeight:800,fontFamily:'DM Mono,monospace',color:r.price===minP?'#059669':C.text}}>฿{fmtN(r.price)}</span>
+                              {r.price===minP&&rows.length>1&&<span style={{marginLeft:5,fontSize:10,background:'#d1fae5',color:'#059669',padding:'1px 5px',borderRadius:4,fontWeight:700}}>ถูกสุด</span>}
+                            </td>
+                            <td style={{padding:'10px 10px'}}>
+                              <span style={{padding:'2px 8px',borderRadius:6,background:pl.bg,color:pl.color,fontSize:11,fontWeight:700}}>{pl.emoji} {pl.label}</span>
+                            </td>
+                            <td style={{padding:'10px 10px',color:r.promo?C.indigo:C.muted,fontSize:12}}>{r.promo||'–'}</td>
+                            <td style={{padding:'10px 10px',color:C.sub,fontSize:12}}>{r.warranty||'–'}</td>
+                            <td style={{padding:'10px 10px',color:C.muted,whiteSpace:'nowrap',fontSize:11}}>{fmtDate(r.date)}</td>
+                            <td style={{padding:'10px 10px'}}>
+                              <button onClick={()=>toggleVerify(r.id)} style={{background:'none',border:'none',cursor:'pointer',padding:0}}>
+                                <VBadge verified={r.verified} small/>
+                              </button>
+                            </td>
+                            <td style={{padding:'10px 10px'}}>
+                              <div style={{display:'flex',gap:8}}>
+                                {r.url&&<a href={r.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.indigo,textDecoration:'none'}}>↗</a>}
+                                <button onClick={()=>del(r.id)} style={{fontSize:11,color:'#ef4444',background:'none',border:'none',cursor:'pointer',padding:0}}>ลบ</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -639,26 +826,6 @@ const PriceTab = ({ data, setData, stock }) => {
           })
         )}
       </Card>
-
-      {/* Insight */}
-      {filtered.length >= 2 && (() => {
-        const byStore = {};
-        filtered.forEach(p => { byStore[p.store] = byStore[p.store] || []; byStore[p.store].push(p.price); });
-        const storeAvgs = Object.entries(byStore).map(([s, ps]) => ({ store: s, avg: ps.reduce((a,b) => a+b,0)/ps.length }))
-          .sort((a,b) => a.avg - b.avg);
-        const minS = storeAvgs[0];
-        const maxS = storeAvgs[storeAvgs.length - 1];
-        return (
-          <Card style={{ borderLeft: `4px solid ${C.indigo}` }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>💡 สรุปการแข่งขันด้านราคา</div>
-            <div style={{ fontSize: 13, color: C.sub, lineHeight: 2 }}>
-              <div>🏆 ร้านถูกสุดโดยเฉลี่ย: <strong style={{ color: '#059669' }}>{minS.store}</strong> (฿{fmtN(Math.round(minS.avg))} เฉลี่ย)</div>
-              <div>📈 ร้านแพงสุดโดยเฉลี่ย: <strong>{maxS.store}</strong> (฿{fmtN(Math.round(maxS.avg))} เฉลี่ย)</div>
-              <div>📊 ส่วนต่างราคาตลาด: <strong>฿{fmtN(Math.round(maxS.avg - minS.avg))}</strong> ({((maxS.avg - minS.avg)/minS.avg*100).toFixed(1)}%)</div>
-            </div>
-          </Card>
-        );
-      })()}
     </div>
   );
 };
@@ -668,81 +835,74 @@ const SentimentTab = ({ data, setData, stock }) => {
   const [showForm, setShowForm] = useState(false);
   const [filterSrc, setFilterSrc] = useState('all');
   const [filterSent, setFilterSent] = useState('all');
-  const [form, setForm] = useState({
-    source: 'pantip', sentiment: 'positive', title: '',
-    url: '', feedbackCount: '', date: today(), note: '',
-  });
+  const [form, setForm] = useState({source:'pantip',sentiment:'positive',title:'',url:'',feedbackCount:'',date:today(),note:'',verified:false});
 
   const sd  = data.stocks[stock] || mkStock();
   const all = sd.sentiments || [];
   const score = calcSentScore(all);
-
-  const filtered = all.filter(s =>
-    (filterSrc === 'all' || s.source === filterSrc) &&
-    (filterSent === 'all' || s.sentiment === filterSent)
-  );
+  const filtered = all.filter(s=>(filterSrc==='all'||s.source===filterSrc)&&(filterSent==='all'||s.sentiment===filterSent));
 
   const add = () => {
-    if (!form.title.trim()) return;
-    const updated = { ...data };
-    if (!updated.stocks[stock]) updated.stocks[stock] = mkStock();
-    updated.stocks[stock].sentiments = [
-      ...(updated.stocks[stock].sentiments || []),
-      { ...form, id: uid(), feedbackCount: Math.max(1, Number(form.feedbackCount) || 1) },
-    ];
+    if(!form.title.trim()) return;
+    const updated={...data};
+    if(!updated.stocks[stock]) updated.stocks[stock]=mkStock();
+    updated.stocks[stock].sentiments=[...(updated.stocks[stock].sentiments||[]),{...form,id:uid(),feedbackCount:Math.max(1,Number(form.feedbackCount)||1)}];
     setData(updated); saveData(updated);
     setShowForm(false);
-    setForm(f => ({ ...f, title: '', url: '', feedbackCount: '', note: '' }));
+    setForm(f=>({...f,title:'',url:'',feedbackCount:'',note:'',verified:false}));
   };
 
   const del = id => {
-    const updated = { ...data };
-    updated.stocks[stock].sentiments = updated.stocks[stock].sentiments.filter(s => s.id !== id);
+    const updated={...data};
+    updated.stocks[stock].sentiments=updated.stocks[stock].sentiments.filter(s=>s.id!==id);
     setData(updated); saveData(updated);
   };
 
-  const srcCount = {};
-  all.forEach(s => { srcCount[s.source] = (srcCount[s.source] || 0) + 1; });
-  const sentCount = { positive: 0, neutral: 0, negative: 0 };
-  all.forEach(s => { if (sentCount[s.sentiment] !== undefined) sentCount[s.sentiment]++; });
+  const toggleVerify = id => {
+    const updated={...data};
+    updated.stocks[stock].sentiments=updated.stocks[stock].sentiments.map(s=>s.id===id?{...s,verified:!s.verified}:s);
+    setData(updated); saveData(updated);
+  };
+
+  const srcCount={};
+  all.forEach(s=>{ srcCount[s.source]=(srcCount[s.source]||0)+1; });
+  const sentCount={positive:0,neutral:0,negative:0};
+  all.forEach(s=>{ if(sentCount[s.sentiment]!==undefined) sentCount[s.sentiment]++; });
 
   return (
-    <div style={{ display: 'grid', gap: 20, animation: 'fadeUp .2s ease' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div style={{display:'grid',gap:20,animation:'fadeUp .2s ease'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
         <Card>
-          <SH title="Sentiment Score (Weighted)" sub="Credibility × Feedback Count ถ่วงน้ำหนัก" />
-          <Gauge score={score} />
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-            {Object.entries(SENTIMENTS).map(([k, v]) => (
-              <span key={k} style={{ padding: '4px 12px', borderRadius: 6, background: v.bg,
-                color: v.color, fontSize: 12, fontWeight: 700 }}>
+          <SH title="Sentiment Score (Weighted)" sub="Credibility × Feedback Count — ยืนยันแล้ว = น้ำหนักมากขึ้น"/>
+          <Gauge score={score}/>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}>
+            {Object.entries(SENTIMENTS).map(([k,v])=>(
+              <span key={k} style={{padding:'4px 12px',borderRadius:6,background:v.bg,color:v.color,fontSize:12,fontWeight:700}}>
                 {v.emoji} {v.label} · {sentCount[k]}
               </span>
             ))}
           </div>
+          <div style={{marginTop:10,fontSize:11,color:C.muted}}>
+            ยืนยันแล้ว {all.filter(s=>s.verified).length}/{all.length} รายการ
+          </div>
         </Card>
         <Card>
-          <SH title="แหล่งที่มา" sub={`${all.length} รายการ · ${Object.keys(srcCount).length} แหล่ง`} />
-          {Object.keys(srcCount).length === 0 ? (
-            <div style={{ color: C.muted, fontSize: 13 }}>ยังไม่มีข้อมูล</div>
-          ) : (
-            Object.entries(srcCount).sort((a, b) => b[1] - a[1]).map(([src, cnt]) => {
-              const s = SOURCES[src] || SOURCES.manual;
-              return (
-                <div key={src} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 16 }}>{s.icon}</span>
-                  <span style={{ flex: 1, fontSize: 13 }}>{s.label}</span>
-                  <div style={{ display: 'flex', gap: 2 }}>
-                    {[1,2,3,4,5].map(i => (
-                      <div key={i} style={{ width: 7, height: 7, borderRadius: 2,
-                        background: i <= s.cred ? s.color : C.border }} />
-                    ))}
-                  </div>
-                  <span style={{ fontSize: 12, color: C.muted, minWidth: 22, textAlign: 'right', fontWeight: 700 }}>{cnt}</span>
+          <SH title="แหล่งที่มา" sub={`${all.length} รายการ · ${Object.keys(srcCount).length} แหล่ง`}/>
+          {Object.keys(srcCount).length===0 ? (
+            <div style={{color:C.muted,fontSize:13}}>ยังไม่มีข้อมูล</div>
+          ) : Object.entries(srcCount).sort((a,b)=>b[1]-a[1]).map(([src,cnt])=>{
+            const s=SOURCES[src]||SOURCES.manual;
+            return (
+              <div key={src} style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                <span style={{fontSize:16}}>{s.icon}</span>
+                <span style={{flex:1,fontSize:13}}>{s.label}</span>
+                <div style={{display:'flex',gap:2}}>
+                  {[1,2,3,4,5].map(i=><div key={i} style={{width:7,height:7,borderRadius:2,background:i<=s.cred?s.color:C.border}}/>)}
                 </div>
-              );
-            })
-          )}
+                <span style={{fontSize:12,color:C.muted,minWidth:22,textAlign:'right',fontWeight:700}}>{cnt}</span>
+              </div>
+            );
+          })}
         </Card>
       </div>
 
@@ -750,101 +910,97 @@ const SentimentTab = ({ data, setData, stock }) => {
         <SH title="รายการ Sentiment"
           sub={`${stock} · ${all.length} รายการ · แสดง ${filtered.length}`}
           right={<>
-            <Sel value={filterSrc} onChange={setFilterSrc} style={{ width: 'auto', minWidth: 120 }}>
+            <Sel value={filterSrc} onChange={setFilterSrc} style={{width:'auto',minWidth:120}}>
               <option value="all">ทุกแหล่ง</option>
-              {Object.entries(SOURCES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+              {Object.entries(SOURCES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label}</option>)}
             </Sel>
-            <Sel value={filterSent} onChange={setFilterSent} style={{ width: 'auto' }}>
+            <Sel value={filterSent} onChange={setFilterSent} style={{width:'auto'}}>
               <option value="all">ทุก Sentiment</option>
               <option value="positive">👍 เชิงบวก</option>
               <option value="neutral">😐 กลางๆ</option>
               <option value="negative">👎 เชิงลบ</option>
             </Sel>
-            <Btn onClick={() => setShowForm(v => !v)} sm>{showForm ? '✕ ยกเลิก' : '+ เพิ่ม'}</Btn>
+            <Btn onClick={()=>setShowForm(v=>!v)} sm>{showForm?'✕ ยกเลิก':'+ เพิ่ม'}</Btn>
           </>}
         />
 
-        {showForm && (
-          <FormBox title="เพิ่ม Sentiment Entry" onSave={add} onCancel={() => setShowForm(false)}>
-            <Grid2>
+        {showForm&&(
+          <div style={{background:'#f8fafc',border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:20,animation:'fadeUp .15s ease'}}>
+            <G2>
               <div>
                 <FLabel>แหล่งที่มา</FLabel>
-                <Sel value={form.source} onChange={v => setForm(f => ({ ...f, source: v }))}>
-                  {Object.entries(SOURCES).map(([k, v]) => (
-                    <option key={k} value={k}>{v.icon} {v.label} (น่าเชื่อถือ {v.cred}/5)</option>
-                  ))}
+                <Sel value={form.source} onChange={v=>setForm(f=>({...f,source:v}))}>
+                  {Object.entries(SOURCES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label} ({v.cred}/5)</option>)}
                 </Sel>
               </div>
               <div>
                 <FLabel>Sentiment</FLabel>
-                <Sel value={form.sentiment} onChange={v => setForm(f => ({ ...f, sentiment: v }))}>
+                <Sel value={form.sentiment} onChange={v=>setForm(f=>({...f,sentiment:v}))}>
                   <option value="positive">👍 เชิงบวก</option>
                   <option value="neutral">😐 กลางๆ</option>
                   <option value="negative">👎 เชิงลบ</option>
                 </Sel>
               </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <FLabel>หัวข้อ / ชื่อกระทู้ *</FLabel>
-                <Inp value={form.title} onChange={v => setForm(f => ({ ...f, title: v }))}
-                  placeholder="เช่น รีวิว iPhone 17 จาก Advice ดีมากๆ บริการดีเยี่ยม" />
+              <div style={{gridColumn:'1/-1'}}>
+                <FLabel>หัวข้อ *</FLabel>
+                <Inp value={form.title} onChange={v=>setForm(f=>({...f,title:v}))} placeholder="เช่น รีวิว Advice สาขา Central World ดีมาก"/>
               </div>
               <div>
-                <FLabel>จำนวน Feedback / ความคิดเห็น</FLabel>
-                <Inp type="number" value={form.feedbackCount} onChange={v => setForm(f => ({ ...f, feedbackCount: v }))}
-                  placeholder="เช่น 128 (ส่งผลต่อ weight)" />
+                <FLabel>จำนวน Feedback (ส่งผลต่อ weight)</FLabel>
+                <Inp type="number" value={form.feedbackCount} onChange={v=>setForm(f=>({...f,feedbackCount:v}))} placeholder="เช่น 128"/>
               </div>
               <div>
                 <FLabel>วันที่</FLabel>
-                <Inp type="date" value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} />
+                <Inp type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))}/>
               </div>
-              <div style={{ gridColumn: '1/-1' }}>
+              <div style={{gridColumn:'1/-1'}}>
                 <FLabel>URL (ไม่บังคับ)</FLabel>
-                <Inp value={form.url} onChange={v => setForm(f => ({ ...f, url: v }))}
-                  placeholder="https://pantip.com/topic/..." />
+                <Inp value={form.url} onChange={v=>setForm(f=>({...f,url:v}))} placeholder="https://pantip.com/topic/..."/>
               </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <FLabel>หมายเหตุ / บริบทเพิ่มเติม</FLabel>
-                <Inp value={form.note} onChange={v => setForm(f => ({ ...f, note: v }))}
-                  placeholder="เช่น กระทู้นี้มีทั้งบวกและลบ เลือก sentiment ที่โดดเด่นกว่า" />
+              <div style={{gridColumn:'1/-1',display:'flex',alignItems:'center',gap:10}}>
+                <input type="checkbox" id="sver" checked={!!form.verified} onChange={e=>setForm(f=>({...f,verified:e.target.checked}))} style={{width:16,height:16,accentColor:C.indigo}}/>
+                <label htmlFor="sver" style={{fontSize:13,cursor:'pointer'}}>✓ ยืนยันว่าตรวจสอบ source URL แล้ว</label>
               </div>
-            </Grid2>
-          </FormBox>
+            </G2>
+            <div style={{marginTop:14,display:'flex',gap:8}}>
+              <Btn onClick={add}>💾 บันทึก</Btn>
+              <Btn onClick={()=>setShowForm(false)} v="ghost">ยกเลิก</Btn>
+            </div>
+          </div>
         )}
 
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: C.muted, padding: '40px 0', fontSize: 13 }}>
-            {all.length === 0 ? 'ยังไม่มีข้อมูล Sentiment · กด + เพิ่ม' : 'ไม่มีรายการที่ตรงกับ filter'}
-          </div>
+        {filtered.length===0 ? (
+          <div style={{textAlign:'center',color:C.muted,padding:'40px 0',fontSize:13}}>ยังไม่มีข้อมูล</div>
         ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {filtered.slice().reverse().map(s => {
-              const sent = SENTIMENTS[s.sentiment] || SENTIMENTS.neutral;
-              const src  = SOURCES[s.source] || SOURCES.manual;
+          <div style={{display:'grid',gap:10}}>
+            {filtered.slice().reverse().map(s=>{
+              const sent=SENTIMENTS[s.sentiment]||SENTIMENTS.neutral;
+              const src=SOURCES[s.source]||SOURCES.manual;
               return (
-                <div key={s.id} style={{ padding: '12px 16px', borderRadius: 10,
-                  border: `1px solid ${sent.bg}`, background: sent.bg + '50' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{src.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>{s.title}</span>
-                        <Tag text={`${sent.emoji} ${sent.label}`} color={sent.color} bg={sent.bg} />
+                <div key={s.id} style={{padding:'12px 16px',borderRadius:10,border:`1px solid ${sent.bg}`,background:sent.bg+'50'}}>
+                  <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+                    <span style={{fontSize:20,flexShrink:0,marginTop:1}}>{src.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
+                        <span style={{fontSize:13,fontWeight:600}}>{s.title}</span>
+                        <span style={{padding:'2px 8px',borderRadius:6,background:sent.bg,color:sent.color,fontSize:11,fontWeight:700}}>{sent.emoji} {sent.label}</span>
                       </div>
-                      <div style={{ fontSize: 11, color: C.sub, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{fontSize:11,color:C.sub,display:'flex',gap:10,flexWrap:'wrap'}}>
                         <span>{src.label}</span>
-                        {s.feedbackCount > 1 && <span>💬 {fmtN(s.feedbackCount)} ความคิดเห็น</span>}
-                        <span>น่าเชื่อถือ {src.cred}/5</span>
-                        {s.date && <span>· {fmtDate(s.date)}</span>}
-                        {s.note && <span>· {s.note}</span>}
+                        {s.feedbackCount>1&&<span>💬 {fmtN(s.feedbackCount)} ความเห็น</span>}
+                        <span>cred {src.cred}/5</span>
+                        {s.date&&<span>· {fmtDate(s.date)}</span>}
+                        {s.note&&<span>· {s.note}</span>}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      {s.url && (
-                        <a href={s.url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 12, color: C.indigo, textDecoration: 'none' }}>↗</a>
-                      )}
-                      <button onClick={() => del(s.id)}
-                        style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                    <div style={{display:'flex',gap:6,flexShrink:0,flexDirection:'column',alignItems:'flex-end'}}>
+                      <button onClick={()=>toggleVerify(s.id)} style={{background:'none',border:'none',cursor:'pointer',padding:0}}>
+                        <VBadge verified={s.verified} small/>
+                      </button>
+                      <div style={{display:'flex',gap:6}}>
+                        {s.url&&<a href={s.url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.indigo,textDecoration:'none'}}>↗</a>}
+                        <button onClick={()=>del(s.id)} style={{fontSize:12,color:'#ef4444',background:'none',border:'none',cursor:'pointer'}}>✕</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -860,161 +1016,96 @@ const SentimentTab = ({ data, setData, stock }) => {
 // ── News Tab ──────────────────────────────────────────────────────────────────
 const NewsTab = ({ data, setData, stock }) => {
   const [showForm, setShowForm] = useState(false);
-  const [showApiGuide, setShowApiGuide] = useState(false);
-  const [form, setForm] = useState({
-    source: 'news_official', sentiment: 'neutral', title: '',
-    publisher: '', url: '', date: today(), summary: '',
-  });
+  const [form, setForm] = useState({source:'news_official',sentiment:'neutral',title:'',publisher:'',url:'',date:today(),summary:'',verified:false});
 
   const sd   = data.stocks[stock] || mkStock();
   const news = sd.news || [];
-  const score = calcSentScore(news.map(n => ({ ...n, feedbackCount: 1 })));
+  const score = calcSentScore(news.map(n=>({...n,feedbackCount:1})));
 
   const add = () => {
-    if (!form.title.trim()) return;
-    const updated = { ...data };
-    if (!updated.stocks[stock]) updated.stocks[stock] = mkStock();
-    updated.stocks[stock].news = [
-      { ...form, id: uid(), feedbackCount: 1 },
-      ...(updated.stocks[stock].news || []),
-    ];
+    if(!form.title.trim()) return;
+    const updated={...data};
+    if(!updated.stocks[stock]) updated.stocks[stock]=mkStock();
+    updated.stocks[stock].news=[{...form,id:uid(),feedbackCount:1},...(updated.stocks[stock].news||[])];
     setData(updated); saveData(updated);
     setShowForm(false);
-    setForm(f => ({ ...f, title: '', publisher: '', url: '', summary: '' }));
+    setForm(f=>({...f,title:'',publisher:'',url:'',summary:'',verified:false}));
   };
 
   const del = id => {
-    const updated = { ...data };
-    updated.stocks[stock].news = updated.stocks[stock].news.filter(n => n.id !== id);
+    const updated={...data};
+    updated.stocks[stock].news=updated.stocks[stock].news.filter(n=>n.id!==id);
+    setData(updated); saveData(updated);
+  };
+
+  const toggleVerify = id => {
+    const updated={...data};
+    updated.stocks[stock].news=updated.stocks[stock].news.map(n=>n.id===id?{...n,verified:!n.verified}:n);
     setData(updated); saveData(updated);
   };
 
   return (
-    <div style={{ display: 'grid', gap: 20, animation: 'fadeUp .2s ease' }}>
+    <div style={{display:'grid',gap:20,animation:'fadeUp .2s ease'}}>
       <Card>
         <SH title="ข่าวสาร & Media Coverage"
-          sub={`${stock} · ${news.length} รายการ · News Sentiment: `}
+          sub={`${stock} · ${news.length} รายการ · ยืนยัน ${news.filter(n=>n.verified).length}/${news.length}`}
           right={<>
-            <Btn onClick={() => setShowApiGuide(v => !v)} v="outline" sm>📡 API Guide</Btn>
-            <Btn onClick={() => setShowForm(v => !v)} sm>{showForm ? '✕ ยกเลิก' : '+ เพิ่มข่าว'}</Btn>
+            <Btn onClick={()=>setShowForm(v=>!v)} sm>{showForm?'✕ ยกเลิก':'+ เพิ่มข่าว'}</Btn>
           </>}
         />
+        {score!==null&&<div style={{marginBottom:14}}><Gauge score={score}/></div>}
 
-        {score !== null && (
-          <div style={{ marginBottom: 14 }}>
-            <Gauge score={score} />
-          </div>
-        )}
-
-        {showApiGuide && (
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10,
-            padding: 16, marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8', marginBottom: 10 }}>
-              🔌 Free News APIs — สำหรับหุ้นไทย
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
-              {[
-                { name: 'NewsAPI.org', tier: 'Free 100/day', note: 'ค้นหา "ADVICE", "COM7", "Jmart" ภาษาไทยได้' },
-                { name: 'GNews.io', tier: 'Free 100/day', note: 'รองรับ Thai language · JSON API' },
-                { name: 'Pantip RSS', tier: 'Free ไม่จำกัด', note: 'ค้นหากระทู้ที่กล่าวถึงบริษัท ใช้ keyword' },
-                { name: 'SET Market News', tier: 'Free', note: 'ข่าว Corporate Filing จาก set.or.th' },
-                { name: 'Thairath / Matichon', tier: 'Free RSS', note: 'ข่าวธุรกิจ · อ่านผ่าน RSS reader' },
-                { name: 'Alpha Vantage', tier: 'Free 500/day', note: 'News + Sentiment score อัตโนมัติ' },
-              ].map(api => (
-                <div key={api.name} style={{ padding: '10px 12px', background: '#fff', borderRadius: 8, border: `1px solid ${C.border}` }}>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 4, alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, background: '#d1fae5', color: '#059669',
-                      padding: '1px 7px', borderRadius: 4, fontWeight: 700 }}>{api.tier}</span>
-                    <strong style={{ fontSize: 12 }}>{api.name}</strong>
-                  </div>
-                  <div style={{ fontSize: 11, color: C.sub }}>{api.note}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 12, fontSize: 12, color: C.sub }}>
-              💡 เพิ่มในอนาคต: ใส่ API Key ในหน้า ⚙️ ตั้งค่า เพื่อให้ระบบดึงข่าวอัตโนมัติ
+        {showForm&&(
+          <div style={{background:'#f8fafc',border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:20,animation:'fadeUp .15s ease'}}>
+            <G2>
+              <div><FLabel>แหล่งที่มา</FLabel><Sel value={form.source} onChange={v=>setForm(f=>({...f,source:v}))}>{Object.entries(SOURCES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label}</option>)}</Sel></div>
+              <div><FLabel>Sentiment</FLabel><Sel value={form.sentiment} onChange={v=>setForm(f=>({...f,sentiment:v}))}><option value="positive">👍 เชิงบวก</option><option value="neutral">😐 กลางๆ</option><option value="negative">👎 เชิงลบ</option></Sel></div>
+              <div style={{gridColumn:'1/-1'}}><FLabel>หัวข้อข่าว *</FLabel><Inp value={form.title} onChange={v=>setForm(f=>({...f,title:v}))} placeholder="เช่น Advice ประกาศเปิดสาขาใหม่ 30 สาขา"/></div>
+              <div><FLabel>สำนักข่าว</FLabel><Inp value={form.publisher} onChange={v=>setForm(f=>({...f,publisher:v}))} placeholder="เช่น ประชาชาติธุรกิจ"/></div>
+              <div><FLabel>วันที่</FLabel><Inp type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))}/></div>
+              <div style={{gridColumn:'1/-1'}}><FLabel>URL</FLabel><Inp value={form.url} onChange={v=>setForm(f=>({...f,url:v}))} placeholder="https://..."/></div>
+              <div style={{gridColumn:'1/-1'}}><FLabel>สรุปย่อ</FLabel><Inp value={form.summary} onChange={v=>setForm(f=>({...f,summary:v}))} placeholder="ใจความสำคัญ 1-2 ประโยค"/></div>
+              <div style={{gridColumn:'1/-1',display:'flex',alignItems:'center',gap:10}}>
+                <input type="checkbox" id="nver" checked={!!form.verified} onChange={e=>setForm(f=>({...f,verified:e.target.checked}))} style={{width:16,height:16,accentColor:C.indigo}}/>
+                <label htmlFor="nver" style={{fontSize:13,cursor:'pointer'}}>✓ ตรวจสอบ URL แหล่งข่าวแล้ว</label>
+              </div>
+            </G2>
+            <div style={{marginTop:14,display:'flex',gap:8}}>
+              <Btn onClick={add}>💾 บันทึก</Btn>
+              <Btn onClick={()=>setShowForm(false)} v="ghost">ยกเลิก</Btn>
             </div>
           </div>
         )}
 
-        {showForm && (
-          <FormBox title="เพิ่มข่าว" onSave={add} onCancel={() => setShowForm(false)}>
-            <Grid2>
-              <div>
-                <FLabel>แหล่งที่มา</FLabel>
-                <Sel value={form.source} onChange={v => setForm(f => ({ ...f, source: v }))}>
-                  {Object.entries(SOURCES).map(([k, v]) => (
-                    <option key={k} value={k}>{v.icon} {v.label}</option>
-                  ))}
-                </Sel>
-              </div>
-              <div>
-                <FLabel>Sentiment</FLabel>
-                <Sel value={form.sentiment} onChange={v => setForm(f => ({ ...f, sentiment: v }))}>
-                  <option value="positive">👍 เชิงบวก</option>
-                  <option value="neutral">😐 กลางๆ</option>
-                  <option value="negative">👎 เชิงลบ</option>
-                </Sel>
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <FLabel>หัวข้อข่าว *</FLabel>
-                <Inp value={form.title} onChange={v => setForm(f => ({ ...f, title: v }))}
-                  placeholder="เช่น Advice ประกาศเปิดสาขาใหม่ 30 สาขา ปี 2026" />
-              </div>
-              <div>
-                <FLabel>สำนักข่าว / ผู้เผยแพร่</FLabel>
-                <Inp value={form.publisher} onChange={v => setForm(f => ({ ...f, publisher: v }))}
-                  placeholder="เช่น ประชาชาติธุรกิจ" />
-              </div>
-              <div>
-                <FLabel>วันที่</FLabel>
-                <Inp type="date" value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} />
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <FLabel>URL ข่าว</FLabel>
-                <Inp value={form.url} onChange={v => setForm(f => ({ ...f, url: v }))} placeholder="https://..." />
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <FLabel>สรุปย่อ</FLabel>
-                <Inp value={form.summary} onChange={v => setForm(f => ({ ...f, summary: v }))}
-                  placeholder="สรุปใจความสำคัญ 1-2 ประโยค" />
-              </div>
-            </Grid2>
-          </FormBox>
-        )}
-
-        {news.length === 0 ? (
-          <div style={{ textAlign: 'center', color: C.muted, padding: '40px 0', fontSize: 13 }}>
-            ยังไม่มีข่าว · กด <strong>+ เพิ่มข่าว</strong> หรือ กด <strong>API Guide</strong> เพื่อดูวิธีดึงข่าวอัตโนมัติ
-          </div>
+        {news.length===0 ? (
+          <div style={{textAlign:'center',color:C.muted,padding:'40px 0',fontSize:13}}>ยังไม่มีข่าว · กด + เพิ่มข่าว</div>
         ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {news.map(n => {
-              const sent = SENTIMENTS[n.sentiment] || SENTIMENTS.neutral;
-              const src  = SOURCES[n.source] || SOURCES.manual;
+          <div style={{display:'grid',gap:10}}>
+            {news.map(n=>{
+              const sent=SENTIMENTS[n.sentiment]||SENTIMENTS.neutral;
+              const src=SOURCES[n.source]||SOURCES.manual;
               return (
-                <div key={n.id} style={{ padding: '12px 16px', borderRadius: 10, border: `1px solid ${C.border}` }}>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>{src.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{n.title}</span>
-                        <Tag text={`${sent.emoji} ${sent.label}`} color={sent.color} bg={sent.bg} />
+                <div key={n.id} style={{padding:'12px 16px',borderRadius:10,border:`1px solid ${C.border}`}}>
+                  <div style={{display:'flex',gap:10}}>
+                    <span style={{fontSize:20,flexShrink:0,marginTop:2}}>{src.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{display:'flex',alignItems:'flex-start',gap:8,marginBottom:4,flexWrap:'wrap'}}>
+                        <span style={{fontSize:13,fontWeight:600,flex:1}}>{n.title}</span>
+                        <span style={{padding:'2px 8px',borderRadius:6,background:sent.bg,color:sent.color,fontSize:11,fontWeight:700}}>{sent.emoji} {sent.label}</span>
                       </div>
-                      {n.summary && <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{n.summary}</div>}
-                      <div style={{ fontSize: 11, color: C.muted, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        {n.publisher && <span><strong>{n.publisher}</strong></span>}
+                      {n.summary&&<div style={{fontSize:12,color:C.sub,marginBottom:4}}>{n.summary}</div>}
+                      <div style={{fontSize:11,color:C.muted,display:'flex',gap:10,flexWrap:'wrap'}}>
+                        {n.publisher&&<span><strong>{n.publisher}</strong></span>}
                         <span>{src.label}</span>
-                        {n.date && <span>{fmtDate(n.date)}</span>}
+                        {n.date&&<span>{fmtDate(n.date)}</span>}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      {n.url && (
-                        <a href={n.url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 12, color: C.indigo, textDecoration: 'none' }}>↗</a>
-                      )}
-                      <button onClick={() => del(n.id)}
-                        style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                    <div style={{display:'flex',gap:6,flexShrink:0,flexDirection:'column',alignItems:'flex-end'}}>
+                      <button onClick={()=>toggleVerify(n.id)} style={{background:'none',border:'none',cursor:'pointer',padding:0}}><VBadge verified={n.verified} small/></button>
+                      <div style={{display:'flex',gap:6}}>
+                        {n.url&&<a href={n.url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.indigo,textDecoration:'none'}}>↗</a>}
+                        <button onClick={()=>del(n.id)} style={{fontSize:12,color:'#ef4444',background:'none',border:'none',cursor:'pointer'}}>✕</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1030,186 +1121,157 @@ const NewsTab = ({ data, setData, stock }) => {
 // ── Traffic Tab ───────────────────────────────────────────────────────────────
 const TrafficTab = ({ data, setData, stock }) => {
   const [showForm, setShowForm] = useState(false);
-  const defaultKw = stock === 'ADVICE' ? 'Advice Thailand' : stock === 'COM7' ? 'COM7 BNN' : stock === 'JMART' ? 'Jmart Thailand' : stock;
-  const [kwInput, setKwInput] = useState(defaultKw);
-  const [activeKw, setActiveKw] = useState(defaultKw);
-  const [form, setForm] = useState({
-    source: 'google_trends', value: '', date: today(), note: '',
-  });
+  const defKw = stock==='ADVICE'?'Advice Thailand':stock==='COM7'?'COM7 BNN':stock==='JMART'?'Jmart Thailand':stock;
+  const [kwInput, setKwInput] = useState(defKw);
+  const [activeKw, setActiveKw] = useState(defKw);
+  const [form, setForm] = useState({source:'google_trends',value:'',date:today(),note:'',verified:false});
 
   const sd      = data.stocks[stock] || mkStock();
   const traffic = sd.traffic || [];
+  const { score, confidence, breakdown } = useMemo(()=>calcTrafficComposite(traffic),[traffic]);
 
   const add = () => {
-    const v = parseFloat(form.value);
-    if (!v && v !== 0) return;
-    const updated = { ...data };
-    if (!updated.stocks[stock]) updated.stocks[stock] = mkStock();
-    updated.stocks[stock].traffic = [
-      ...(updated.stocks[stock].traffic || []),
-      { ...form, id: uid(), value: v },
-    ];
+    const v=parseFloat(form.value);
+    if(isNaN(v)) return;
+    const updated={...data};
+    if(!updated.stocks[stock]) updated.stocks[stock]=mkStock();
+    updated.stocks[stock].traffic=[...(updated.stocks[stock].traffic||[]),{...form,id:uid(),value:v}];
     setData(updated); saveData(updated);
     setShowForm(false);
-    setForm(f => ({ ...f, value: '', note: '' }));
+    setForm(f=>({...f,value:'',note:'',verified:false}));
   };
 
   const del = id => {
-    const updated = { ...data };
-    updated.stocks[stock].traffic = updated.stocks[stock].traffic.filter(t => t.id !== id);
+    const updated={...data};
+    updated.stocks[stock].traffic=updated.stocks[stock].traffic.filter(t=>t.id!==id);
     setData(updated); saveData(updated);
   };
 
-  const maxVal  = traffic.length ? Math.max(...traffic.map(t => t.value), 1) : 100;
-  const lastVal = traffic.slice(-1)[0];
-  const trafficColor = v => v >= 65 ? '#10b981' : v >= 35 ? '#f59e0b' : '#ef4444';
+  const toggleVerify = id => {
+    const updated={...data};
+    updated.stocks[stock].traffic=updated.stocks[stock].traffic.map(t=>t.id===id?{...t,verified:!t.verified}:t);
+    setData(updated); saveData(updated);
+  };
+
+  const trafficColor = v => v>=65?'#10b981':v>=35?'#f59e0b':'#ef4444';
+
+  // Mini bar for google_trends history
+  const gtHistory = traffic.filter(t=>t.source==='google_trends').sort((a,b)=>a.date.localeCompare(b.date));
+  const gtMax = gtHistory.length ? Math.max(...gtHistory.map(t=>t.value),1) : 100;
 
   return (
-    <div style={{ display: 'grid', gap: 20, animation: 'fadeUp .2s ease' }}>
-      {/* Google Trends embed */}
+    <div style={{display:'grid',gap:20,animation:'fadeUp .2s ease'}}>
+
+      {/* Composite Score */}
+      <TrafficCompositeCard traffic={traffic}/>
+
+      {/* Google Trends trend mini chart */}
+      {gtHistory.length>=2&&(
+        <Card>
+          <SH title="Google Trends — Search Interest Trend" sub={`${stock} · ${gtHistory.length} readings · ยืนยัน ${gtHistory.filter(t=>t.verified).length}/${gtHistory.length}`}/>
+          <div style={{display:'flex',gap:4,alignItems:'flex-end',height:70,marginBottom:8}}>
+            {gtHistory.map(t=>{
+              const h=Math.max(4,(t.value/gtMax)*60);
+              return (
+                <div key={t.id} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                  <div title={`${fmtDate(t.date)}: ${t.value}`}
+                    style={{width:'100%',height:h,background:trafficColor(t.value),borderRadius:'3px 3px 0 0',minWidth:14,position:'relative'}}>
+                    {!t.verified&&<div style={{position:'absolute',top:0,right:0,width:5,height:5,borderRadius:'0 3px 0 0',background:'#f59e0b'}}/>}
+                  </div>
+                  <div style={{fontSize:8,color:C.muted,textAlign:'center'}}>{t.date.slice(5).replace('-','/')}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{fontSize:11,color:C.muted}}>🟡 มุมขวาบน = ยังไม่ยืนยัน · สีเขียว≥65, เหลือง35-64, แดง&lt;35</div>
+        </Card>
+      )}
+
+      {/* Google Trends Embed */}
       <Card>
-        <SH title="Google Trends — Search Interest"
-          sub="Relative search interest 0–100 · ค้นหาชื่อแบรนด์/สินค้า เป็น Proxy ของ Consumer Demand"
+        <SH title="Google Trends Embed"
+          sub="Relative search interest 0–100 · Proxy สำหรับ consumer demand"
           right={<>
-            <Inp value={kwInput} onChange={setKwInput} placeholder="keyword" style={{ width: 200 }} />
-            <Btn onClick={() => setActiveKw(kwInput)} sm>ค้นหา</Btn>
+            <Inp value={kwInput} onChange={setKwInput} placeholder="keyword" style={{width:200}}/>
+            <Btn onClick={()=>setActiveKw(kwInput)} sm>ค้นหา</Btn>
           </>}
         />
-        <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}` }}>
-          <iframe
-            key={activeKw}
+        <div style={{borderRadius:10,overflow:'hidden',border:`1px solid ${C.border}`}}>
+          <iframe key={activeKw}
             src={`https://trends.google.com/trends/embed/explore/TIMESERIES?req=%7B%22comparisonItem%22%3A%5B%7B%22keyword%22%3A%22${encodeURIComponent(activeKw)}%22%2C%22geo%22%3A%22TH%22%2C%22time%22%3A%22today%203-m%22%7D%5D%2C%22category%22%3A0%2C%22property%22%3A%22%22%7D&tz=-420&lang=th`}
-            width="100%" height="300" frameBorder="0" scrolling="no"
-            style={{ display: 'block', minHeight: 300 }}
-            title="Google Trends"
-          />
+            width="100%" height="280" frameBorder="0" scrolling="no" style={{display:'block'}} title="Google Trends"/>
         </div>
-        <div style={{ marginTop: 8, fontSize: 11, color: C.muted }}>
-          💡 ถ้า embed ไม่โหลด → เปิด <a href={`https://trends.google.com/trends/explore?q=${encodeURIComponent(activeKw)}&geo=TH`}
-            target="_blank" rel="noopener noreferrer" style={{ color: C.indigo }}>Google Trends ตรง</a> ในแท็บใหม่
-          · ดูค่า 0-100 แล้วบันทึกด้านล่าง
+        <div style={{marginTop:8,fontSize:11,color:C.muted}}>
+          💡 ถ้า iframe ไม่โหลด →{' '}
+          <a href={`https://trends.google.com/trends/explore?q=${encodeURIComponent(activeKw)}&geo=TH`} target="_blank" rel="noopener noreferrer" style={{color:C.indigo}}>เปิด Google Trends ตรง</a>
+          {' '}→ จด Index 0-100 → บันทึกด้านล่าง
         </div>
       </Card>
 
-      {/* Traffic Methods */}
-      <Card>
-        <SH title="วิธีวัด Store Traffic" sub="Proxy methods สำหรับ retail foot traffic — จากง่ายไปยาก" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 12 }}>
-          {[
-            { icon: '🔍', method: 'Google Trends', access: 'ฟรี', rel: 3,
-              note: 'ค้นหาชื่อแบรนด์เป็น proxy consumer interest · ไม่แม่นยำ 100% แต่ทำได้ทันที' },
-            { icon: '⭐', method: 'Google Maps Reviews', access: 'ฟรี', rel: 3,
-              note: 'นับจำนวน review ใหม่ต่อเดือน proxy foot traffic · ต้องเช็คด้วยมือ' },
-            { icon: '📍', method: 'Google Popular Times', access: 'ฟรี (ไม่มี API)', rel: 4,
-              note: 'เห็นช่วงเวลายอดนิยมบน Google Maps · ต้อง scrape หรือดูด้วยมือ' },
-            { icon: '🌐', method: 'SimilarWeb', access: 'ฟรี (จำกัด)', rel: 3,
-              note: 'Web traffic รายเดือน · ดีสำหรับ online channel เทียบคู่แข่ง' },
-            { icon: '📱', method: 'Mobile Location Data', access: 'ราคาสูง', rel: 5,
-              note: 'SafeGraph / Veraset วัด GPS device visits จริงๆ · กองทุน Institutional ใช้' },
-            { icon: '🛰️', method: 'Satellite Imagery', access: 'ราคาสูงมาก', rel: 5,
-              note: 'Orbital Insight นับรถที่จอดรถ · แม่นยำสูงสุด ใช้กับ Big Box Retail' },
-          ].map(m => (
-            <div key={m.method} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 12 }}>
-              <div style={{ fontSize: 22, marginBottom: 6 }}>{m.icon}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 3 }}>{m.method}</div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                <span style={{ fontSize: 10, padding: '2px 6px', background: '#f1f5f9',
-                  borderRadius: 4, color: C.sub }}>{m.access}</span>
-                <span style={{ fontSize: 10, padding: '2px 6px', background: '#ede9fe',
-                  borderRadius: 4, color: '#7c3aed' }}>ความน่าเชื่อถือ {m.rel}/5</span>
-              </div>
-              <div style={{ fontSize: 11, color: C.sub, lineHeight: 1.5 }}>{m.note}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Manual Entries */}
+      {/* Data Entry */}
       <Card>
         <SH title="บันทึก Traffic Data"
-          sub={`${stock} · ${traffic.length} รายการ`}
-          right={<Btn onClick={() => setShowForm(v => !v)} sm>{showForm ? '✕ ยกเลิก' : '+ บันทึก'}</Btn>}
+          sub={`${stock} · ${traffic.length} รายการ · ยืนยัน ${traffic.filter(t=>t.verified).length}/${traffic.length} · Composite ${score??'–'}/100`}
+          right={<Btn onClick={()=>setShowForm(v=>!v)} sm>{showForm?'✕ ยกเลิก':'+ บันทึก'}</Btn>}
         />
 
-        {showForm && (
-          <FormBox title="บันทึก Traffic Reading" onSave={add} onCancel={() => setShowForm(false)}>
-            <Grid2>
+        {showForm&&(
+          <div style={{background:'#f8fafc',border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:20,animation:'fadeUp .15s ease'}}>
+            <G2>
               <div>
                 <FLabel>แหล่งข้อมูล</FLabel>
-                <Sel value={form.source} onChange={v => setForm(f => ({ ...f, source: v }))}>
-                  {Object.entries(TRAFFIC_SOURCES).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
+                <Sel value={form.source} onChange={v=>setForm(f=>({...f,source:v}))}>
+                  {Object.entries(TRAFFIC_CFG).map(([k,v])=><option key={k} value={k}>{v.label} ({v.unit})</option>)}
                 </Sel>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
-                  {TRAFFIC_SOURCES[form.source]?.desc}
+                <div style={{fontSize:10,color:C.muted,marginTop:4}}>
+                  {TRAFFIC_CFG[form.source]?.desc} · หน่วย: {TRAFFIC_CFG[form.source]?.unit} · น้ำหนัก {Math.round((TRAFFIC_CFG[form.source]?.w||0)*100)}%
                 </div>
               </div>
               <div>
-                <FLabel>ค่า *</FLabel>
-                <Inp type="number" value={form.value} onChange={v => setForm(f => ({ ...f, value: v }))}
-                  placeholder="เช่น 72 (สำหรับ Google Trends 0-100)" />
+                <FLabel>ค่า * (หน่วย: {TRAFFIC_CFG[form.source]?.unit})</FLabel>
+                <Inp type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder={form.source==='google_trends'?'เช่น 72':'ใส่ตัวเลข'}/>
               </div>
               <div>
                 <FLabel>วันที่</FLabel>
-                <Inp type="date" value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} />
+                <Inp type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))}/>
               </div>
               <div>
                 <FLabel>หมายเหตุ</FLabel>
-                <Inp value={form.note} onChange={v => setForm(f => ({ ...f, note: v }))}
-                  placeholder="context ช่วง iPhone launch ฯลฯ" />
+                <Inp value={form.note} onChange={v=>setForm(f=>({...f,note:v}))} placeholder="context ช่วง iPhone launch ฯลฯ"/>
               </div>
-            </Grid2>
-          </FormBox>
-        )}
-
-        {lastVal && (
-          <div style={{ padding: '10px 16px', background: `${trafficColor(lastVal.value)}10`,
-            border: `1px solid ${trafficColor(lastVal.value)}40`, borderRadius: 8, marginBottom: 14,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13 }}>
-              ค่าล่าสุด · <strong style={{ color: trafficColor(lastVal.value) }}>{lastVal.value}</strong>
-              <span style={{ color: C.muted, marginLeft: 6 }}>({TRAFFIC_SOURCES[lastVal.source]?.label || lastVal.source})</span>
-            </span>
-            <span style={{ fontSize: 11, color: C.muted }}>{fmtDate(lastVal.date)}</span>
+              <div style={{gridColumn:'1/-1',display:'flex',alignItems:'center',gap:10}}>
+                <input type="checkbox" id="tver" checked={!!form.verified} onChange={e=>setForm(f=>({...f,verified:e.target.checked}))} style={{width:16,height:16,accentColor:C.indigo}}/>
+                <label htmlFor="tver" style={{fontSize:13,cursor:'pointer'}}>✓ ดึงข้อมูลจากแหล่งต้นทางโดยตรง (Primary source)</label>
+              </div>
+            </G2>
+            <div style={{marginTop:14,display:'flex',gap:8}}>
+              <Btn onClick={add}>💾 บันทึก</Btn>
+              <Btn onClick={()=>setShowForm(false)} v="ghost">ยกเลิก</Btn>
+            </div>
           </div>
         )}
 
-        {traffic.length === 0 ? (
-          <div style={{ textAlign: 'center', color: C.muted, padding: '40px 0', fontSize: 13 }}>
-            ยังไม่มีข้อมูล Traffic · บันทึกค่าจาก Google Trends หรือแหล่งอื่น
-          </div>
+        {traffic.length===0 ? (
+          <div style={{textAlign:'center',color:C.muted,padding:'40px 0',fontSize:13}}>ยังไม่มีข้อมูล Traffic</div>
         ) : (
-          <>
-            {/* Mini bar chart */}
-            <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 70, marginBottom: 14, padding: '0 4px' }}>
-              {traffic.slice(-24).map(t => {
-                const h = Math.max(4, (t.value / maxVal) * 60);
-                return (
-                  <div key={t.id} title={`${fmtDate(t.date)}: ${t.value}`}
-                    style={{ flex: 1, height: h, background: trafficColor(t.value), borderRadius: '3px 3px 0 0',
-                      minWidth: 6, cursor: 'default', transition: 'height .3s' }} />
-                );
-              })}
-            </div>
-            <div style={{ display: 'grid', gap: 7 }}>
-              {traffic.slice().reverse().map(t => (
-                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '8px 12px', borderRadius: 8, background: '#f8fafc' }}>
-                  <div style={{ width: 38, height: 6, borderRadius: 3, background: trafficColor(t.value), flexShrink: 0 }} />
-                  <span style={{ fontSize: 14, fontWeight: 800, minWidth: 40,
-                    fontFamily: 'DM Mono,monospace', color: trafficColor(t.value) }}>{t.value}</span>
-                  <span style={{ fontSize: 12, color: C.sub, flex: 1 }}>
-                    {TRAFFIC_SOURCES[t.source]?.label || t.source}
-                    {t.note && <span style={{ color: C.muted }}> · {t.note}</span>}
-                  </span>
-                  <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>{fmtDate(t.date)}</span>
-                  <button onClick={() => del(t.id)}
-                    style={{ fontSize: 11, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+          <div style={{display:'grid',gap:7}}>
+            {traffic.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(t=>{
+              const cfg=TRAFFIC_CFG[t.source];
+              const norm=cfg ? Math.min(100,Math.round((t.value/cfg.max)*100)) : null;
+              return (
+                <div key={t.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:8,background:'#f8fafc'}}>
+                  <div style={{width:36,height:6,borderRadius:3,background:norm!==null?trafficColor(norm):'#e2e8f0',flexShrink:0}}/>
+                  <span style={{fontSize:13,fontWeight:800,minWidth:56,fontFamily:'DM Mono,monospace',color:norm!==null?trafficColor(norm):C.sub}}>{fmtN(t.value)}</span>
+                  <span style={{fontSize:11,color:C.muted,width:36}}>{cfg?.unit}</span>
+                  {norm!==null&&<span style={{fontSize:11,color:C.muted}}>(norm {norm}/100)</span>}
+                  <span style={{fontSize:12,color:C.sub,flex:1}}>{cfg?.label||t.source}{t.note&&<span style={{color:C.muted}}> · {t.note}</span>}</span>
+                  <span style={{fontSize:11,color:C.muted,whiteSpace:'nowrap'}}>{fmtDate(t.date)}</span>
+                  <button onClick={()=>toggleVerify(t.id)} style={{background:'none',border:'none',cursor:'pointer',padding:0}}><VBadge verified={t.verified} small/></button>
+                  <button onClick={()=>del(t.id)} style={{fontSize:11,color:'#ef4444',background:'none',border:'none',cursor:'pointer',flexShrink:0}}>✕</button>
                 </div>
-              ))}
-            </div>
-          </>
+              );
+            })}
+          </div>
         )}
       </Card>
     </div>
@@ -1218,118 +1280,75 @@ const TrafficTab = ({ data, setData, stock }) => {
 
 // ── Config Panel ──────────────────────────────────────────────────────────────
 const ConfigPanel = ({ data, setData, setStock }) => {
-  const [ns, setNs] = useState('');
-  const [np, setNp] = useState('');
-  const stocks   = data.config.trackedStocks;
-  const products = data.config.products;
+  const [ns,setNs]=useState(''), [np,setNp]=useState('');
+  const stocks=data.config.trackedStocks, products=data.config.products;
 
-  const addStock = () => {
-    const sym = ns.toUpperCase().trim();
-    if (!sym || stocks.includes(sym)) return;
-    const updated = { ...data,
-      config: { ...data.config, trackedStocks: [...stocks, sym] },
-      stocks: { ...data.stocks, [sym]: data.stocks[sym] || mkStock() },
-    };
-    setData(updated); saveData(updated);
-    setNs(''); setStock(sym);
+  const addStock=()=>{
+    const sym=ns.toUpperCase().trim();
+    if(!sym||stocks.includes(sym)) return;
+    const u={...data,config:{...data.config,trackedStocks:[...stocks,sym]},stocks:{...data.stocks,[sym]:data.stocks[sym]||mkStock()}};
+    setData(u); saveData(u); setNs(''); setStock(sym);
   };
-
-  const removeStock = sym => {
-    if (stocks.length <= 1) return;
-    const updated = { ...data, config: { ...data.config, trackedStocks: stocks.filter(s => s !== sym) } };
-    setData(updated); saveData(updated);
-    setStock(updated.config.trackedStocks[0]);
+  const removeStock=sym=>{
+    if(stocks.length<=1) return;
+    const u={...data,config:{...data.config,trackedStocks:stocks.filter(s=>s!==sym)}};
+    setData(u); saveData(u); setStock(u.config.trackedStocks[0]);
   };
-
-  const addProduct = () => {
-    const p = np.trim();
-    if (!p || products.includes(p)) return;
-    const updated = { ...data, config: { ...data.config, products: [...products, p] } };
-    setData(updated); saveData(updated); setNp('');
+  const addProduct=()=>{
+    const p=np.trim();
+    if(!p||products.includes(p)) return;
+    const u={...data,config:{...data.config,products:[...products,p]}};
+    setData(u); saveData(u); setNp('');
   };
-
-  const removeProduct = p => {
-    const updated = { ...data, config: { ...data.config, products: products.filter(x => x !== p) } };
-    setData(updated); saveData(updated);
+  const removeProduct=p=>{
+    const u={...data,config:{...data.config,products:products.filter(x=>x!==p)}};
+    setData(u); saveData(u);
   };
-
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `social_listening_${today()}.json`;
-    a.click();
+  const exportJson=()=>{
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=`social_${today()}.json`; a.click();
   };
-
-  const fileRef = useRef();
-  const importJson = e => {
-    const f = e.target.files?.[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      try {
-        const d = JSON.parse(ev.target.result);
-        setData(d); saveData(d);
-      } catch { alert('ไฟล์ไม่ถูกต้อง'); }
-    };
+  const fileRef=useRef();
+  const importJson=e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=ev=>{ try{const d=JSON.parse(ev.target.result);setData(d);saveData(d);}catch{alert('ไฟล์ไม่ถูกต้อง');} };
     r.readAsText(f);
   };
 
   return (
-    <div style={{ background: '#fff', borderBottom: `1px solid ${C.border}`, padding: '14px 24px',
-      animation: 'fadeUp .15s ease' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 20, maxWidth: 1100 }}>
-        {/* Stocks */}
+    <div style={{background:'#fff',borderBottom:`1px solid ${C.border}`,padding:'14px 24px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:20,maxWidth:1200}}>
         <div>
-          <FLabel>จัดการหุ้น</FLabel>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            <Inp value={ns} onChange={setNs} placeholder="เช่น DOHOME" style={{ flex: 1 }} />
-            <Btn onClick={addStock} sm>เพิ่ม</Btn>
-          </div>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {stocks.map(s => (
-              <span key={s} style={{ fontSize: 12, padding: '3px 10px', background: '#f1f5f9',
-                borderRadius: 999, display: 'flex', alignItems: 'center', gap: 4 }}>
-                {s}
-                {stocks.length > 1 && (
-                  <button onClick={() => removeStock(s)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 11, padding: 0 }}>✕</button>
-                )}
+          <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>จัดการหุ้น</div>
+          <div style={{display:'flex',gap:6,marginBottom:8}}><Inp value={ns} onChange={setNs} placeholder="เช่น DOHOME" style={{flex:1}}/><Btn onClick={addStock} sm>เพิ่ม</Btn></div>
+          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+            {stocks.map(s=>(
+              <span key={s} style={{fontSize:12,padding:'3px 10px',background:'#f1f5f9',borderRadius:999,display:'flex',alignItems:'center',gap:4}}>
+                {s}{stocks.length>1&&<button onClick={()=>removeStock(s)} style={{background:'none',border:'none',cursor:'pointer',color:C.muted,fontSize:11,padding:0}}>✕</button>}
               </span>
             ))}
           </div>
         </div>
-        {/* Products */}
         <div>
-          <FLabel>จัดการสินค้า ({products.length})</FLabel>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            <Inp value={np} onChange={setNp} placeholder="เช่น iPhone 17 Pro Max" style={{ flex: 1 }} />
-            <Btn onClick={addProduct} sm>เพิ่ม</Btn>
-          </div>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxHeight: 80, overflowY: 'auto' }}>
-            {products.map(p => (
-              <span key={p} style={{ fontSize: 11, padding: '2px 8px', background: '#f1f5f9',
-                borderRadius: 999, display: 'flex', alignItems: 'center', gap: 3 }}>
-                {p}
-                <button onClick={() => removeProduct(p)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 10, padding: 0 }}>✕</button>
+          <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>สินค้า ({products.length})</div>
+          <div style={{display:'flex',gap:6,marginBottom:8}}><Inp value={np} onChange={setNp} placeholder="เช่น iPhone 17 Pro Max" style={{flex:1}}/><Btn onClick={addProduct} sm>เพิ่ม</Btn></div>
+          <div style={{display:'flex',gap:5,flexWrap:'wrap',maxHeight:70,overflowY:'auto'}}>
+            {products.map(p=>(
+              <span key={p} style={{fontSize:11,padding:'2px 8px',background:'#f1f5f9',borderRadius:999,display:'flex',alignItems:'center',gap:3}}>
+                {p}<button onClick={()=>removeProduct(p)} style={{background:'none',border:'none',cursor:'pointer',color:C.muted,fontSize:10,padding:0}}>✕</button>
               </span>
             ))}
           </div>
         </div>
-        {/* Export/Import */}
         <div>
-          <FLabel>นำเข้า / ส่งออกข้อมูล</FLabel>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Export / Import</div>
+          <div style={{display:'flex',gap:8}}>
             <Btn onClick={exportJson} v="outline" sm>📤 Export JSON</Btn>
-            <label style={{ padding: '4px 12px', borderRadius: 8, border: `1px solid ${C.border}`,
-              fontSize: 12, cursor: 'pointer', fontWeight: 600, color: C.sub, background: '#fff',
-              display: 'flex', alignItems: 'center' }}>
-              📥 Import
-              <input ref={fileRef} type="file" accept=".json" onChange={importJson} style={{ display: 'none' }} />
+            <label style={{padding:'4px 12px',borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,cursor:'pointer',fontWeight:600,color:C.sub,background:'#fff',display:'flex',alignItems:'center'}}>
+              📥 Import<input ref={fileRef} type="file" accept=".json" onChange={importJson} style={{display:'none'}}/>
             </label>
-          </div>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
-            ข้อมูลเก็บใน localStorage ของ browser
           </div>
         </div>
       </div>
@@ -1337,104 +1356,65 @@ const ConfigPanel = ({ data, setData, setStock }) => {
   );
 };
 
-// ── Main App ──────────────────────────────────────────────────────────────────
-const TABS = [
-  { id: 'overview',  label: 'ภาพรวม',     icon: '📊' },
-  { id: 'price',     label: 'ราคา & โปร', icon: '💰' },
-  { id: 'sentiment', label: 'Sentiment',   icon: '💬' },
-  { id: 'news',      label: 'ข่าวสาร',    icon: '📰' },
-  { id: 'traffic',   label: 'Traffic',     icon: '📈' },
+// ── App ───────────────────────────────────────────────────────────────────────
+const TABS=[
+  {id:'overview', label:'ภาพรวม',    icon:'📊'},
+  {id:'price',    label:'ราคา & โปร',icon:'💰'},
+  {id:'sentiment',label:'Sentiment',  icon:'💬'},
+  {id:'news',     label:'ข่าวสาร',   icon:'📰'},
+  {id:'traffic',  label:'Traffic',    icon:'📈'},
 ];
 
 const App = () => {
-  const [data, setData] = useState(() => loadData());
-  const [tab,  setTab]  = useState('overview');
-  const [stock, setStock] = useState(() => {
-    try {
-      const d = JSON.parse(localStorage.getItem(SOCIAL_KEY) || 'null');
-      return d?.config?.trackedStocks?.[0] || DEFAULT_STOCKS[0];
-    } catch { return DEFAULT_STOCKS[0]; }
+  const [data,  setData]  = useState(()=>loadData());
+  const [tab,   setTab]   = useState('overview');
+  const [stock, setStock] = useState(()=>{
+    try{ const d=JSON.parse(localStorage.getItem(SOCIAL_KEY)||'null'); return d?.config?.trackedStocks?.[0]||DEF_STOCKS[0]; }catch{ return DEF_STOCKS[0]; }
   });
-  const [showConfig, setShowConfig] = useState(false);
+  const [showCfg, setShowCfg] = useState(false);
 
-  // keep stock valid after config changes
-  useEffect(() => {
-    if (!data.config.trackedStocks.includes(stock)) {
-      setStock(data.config.trackedStocks[0] || DEFAULT_STOCKS[0]);
-    }
-  }, [data.config.trackedStocks]);
-
-  // ensure stock data slot exists
-  const stocks = data.config.trackedStocks;
+  useEffect(()=>{
+    if(!data.config.trackedStocks.includes(stock)) setStock(data.config.trackedStocks[0]||DEF_STOCKS[0]);
+  },[data.config.trackedStocks]);
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg,
-      fontFamily: "'DM Sans','Noto Sans Thai',sans-serif", color: C.text }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
-        *{box-sizing:border-box}
-      `}</style>
+    <div style={{minHeight:'100vh',background:C.bg,fontFamily:"'DM Sans','Noto Sans Thai',sans-serif",color:C.text}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
 
       {/* TOPBAR */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${C.border}`,
-        position: 'sticky', top: 0, zIndex: 100,
-        boxShadow: '0 1px 3px rgba(0,0,0,.05)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px',
-          display: 'flex', alignItems: 'center', gap: 14, height: 56 }}>
-          {/* Logo + Back */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8,
-              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📡</div>
+      <div style={{background:'#fff',borderBottom:`1px solid ${C.border}`,position:'sticky',top:0,zIndex:100,boxShadow:'0 1px 3px rgba(0,0,0,.05)'}}>
+        <div style={{maxWidth:1200,margin:'0 auto',padding:'0 24px',display:'flex',alignItems:'center',gap:14,height:56}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div style={{width:32,height:32,borderRadius:8,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15}}>📡</div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: -.3 }}>SOCIAL LISTENING</div>
-              <div style={{ fontSize: 9, color: C.muted, letterSpacing: .5 }}>REDCODE DASHBOARD</div>
+              <div style={{fontSize:13,fontWeight:800,letterSpacing:-.3}}>SOCIAL LISTENING</div>
+              <div style={{fontSize:9,color:C.muted,letterSpacing:.5}}>REDCODE DASHBOARD</div>
             </div>
           </div>
-
-          <div style={{ width: 1, height: 22, background: C.border }} />
-
-          <a href="index.html" style={{ fontSize: 12, color: C.indigo, textDecoration: 'none',
-            display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-            ← Portfolio
-          </a>
-
-          {/* Stock Pills */}
-          <div style={{ display: 'flex', gap: 5, marginLeft: 4 }}>
-            {stocks.map(s => (
-              <button key={s} onClick={() => setStock(s)}
-                style={{ padding: '4px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontWeight: 700, fontSize: 12, transition: 'all .15s',
-                  background: s === stock ? C.indigo : '#f1f5f9',
-                  color: s === stock ? '#fff' : C.sub }}>
+          <div style={{width:1,height:22,background:C.border}}/>
+          <a href="index.html" style={{fontSize:12,color:C.indigo,textDecoration:'none',fontWeight:600}}>← Portfolio</a>
+          <div style={{display:'flex',gap:5}}>
+            {data.config.trackedStocks.map(s=>(
+              <button key={s} onClick={()=>setStock(s)}
+                style={{padding:'4px 14px',borderRadius:999,border:'none',cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:12,transition:'all .15s',
+                  background:s===stock?C.indigo:'#f1f5f9',color:s===stock?'#fff':C.sub}}>
                 {s}
               </button>
             ))}
           </div>
-
-          <div style={{ flex: 1 }} />
-
-          <button onClick={() => setShowConfig(v => !v)}
-            style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8,
-              padding: '6px 14px', cursor: 'pointer', fontSize: 12, color: C.sub,
-              fontFamily: 'inherit', fontWeight: 600 }}>
+          <div style={{flex:1}}/>
+          <button onClick={()=>setShowCfg(v=>!v)}
+            style={{background:'none',border:`1px solid ${C.border}`,borderRadius:8,padding:'6px 14px',cursor:'pointer',fontSize:12,color:C.sub,fontFamily:'inherit',fontWeight:600}}>
             ⚙️ ตั้งค่า
           </button>
         </div>
-
-        {/* Config Panel */}
-        {showConfig && <ConfigPanel data={data} setData={setData} setStock={setStock} />}
-
-        {/* TAB BAR */}
-        <div style={{ borderTop: `1px solid ${C.border}`, background: '#fff' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 0 }}>
-            {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                style={{ padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontSize: 13, fontWeight: 600, transition: 'all .15s',
-                  color: t.id === tab ? C.indigo : C.muted,
-                  borderBottom: `2px solid ${t.id === tab ? C.indigo : 'transparent'}`,
-                  display: 'flex', alignItems: 'center', gap: 5 }}>
+        {showCfg&&<ConfigPanel data={data} setData={setData} setStock={setStock}/>}
+        <div style={{borderTop:`1px solid ${C.border}`}}>
+          <div style={{maxWidth:1200,margin:'0 auto',padding:'0 24px',display:'flex'}}>
+            {TABS.map(t=>(
+              <button key={t.id} onClick={()=>setTab(t.id)}
+                style={{padding:'12px 20px',border:'none',background:'none',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:600,transition:'all .15s',
+                  color:t.id===tab?C.indigo:C.muted,borderBottom:`2px solid ${t.id===tab?C.indigo:'transparent'}`,display:'flex',alignItems:'center',gap:5}}>
                 {t.icon} {t.label}
               </button>
             ))}
@@ -1443,18 +1423,18 @@ const App = () => {
       </div>
 
       {/* CONTENT */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 48px' }}>
-        {tab === 'overview'  && <OverviewTab  data={data} stock={stock} />}
-        {tab === 'price'     && <PriceTab     data={data} setData={setData} stock={stock} />}
-        {tab === 'sentiment' && <SentimentTab data={data} setData={setData} stock={stock} />}
-        {tab === 'news'      && <NewsTab       data={data} setData={setData} stock={stock} />}
-        {tab === 'traffic'   && <TrafficTab   data={data} setData={setData} stock={stock} />}
+      <div style={{maxWidth:1200,margin:'0 auto',padding:'24px 24px 48px'}}>
+        {tab==='overview'  &&<OverviewTab  data={data} stock={stock}/>}
+        {tab==='price'     &&<PriceTab     data={data} setData={setData} stock={stock}/>}
+        {tab==='sentiment' &&<SentimentTab data={data} setData={setData} stock={stock}/>}
+        {tab==='news'      &&<NewsTab      data={data} setData={setData} stock={stock}/>}
+        {tab==='traffic'   &&<TrafficTab   data={data} setData={setData} stock={stock}/>}
       </div>
     </div>
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
