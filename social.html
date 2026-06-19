@@ -189,6 +189,12 @@ const STORE_COLORS = {
   'อื่นๆ':          '#94a3b8',
 };
 
+const SECTOR_INFO = {
+  ADVICE: { sector:'IT Retail',    peer:'COM7',   peerLabel:'vs COM7',   color:'#6366f1', note:'Pure-play electronics retail' },
+  COM7:   { sector:'IT Retail',    peer:'ADVICE', peerLabel:'vs ADVICE', color:'#10b981', note:'IT retail + BNN omnichannel' },
+  JMART:  { sector:'Diversified',  peer:null,     peerLabel:null,        color:'#f59e0b', note:'IT retail 40% · JMT debt 35% · Singer 25%' },
+};
+
 const PROMO_LEVELS = [
   { v:1, label:'ราคาปกติ',        color:'#94a3b8', bg:'#f1f5f9', emoji:'⚪' },
   { v:2, label:'ส่วนลดเล็กน้อย', color:'#64748b', bg:'#e2e8f0', emoji:'🟡' },
@@ -227,9 +233,11 @@ const today   = () => new Date().toISOString().slice(0,10);
 
 const calcSentScore = items => {
   if (!items||!items.length) return null;
+  const HALF_LIFE = 14;
+  const decay = d => Math.exp(-Math.LN2/HALF_LIFE * Math.max(0,(Date.now()-new Date(d+'T00:00:00').getTime())/86400000));
   let ws=0,wt=0;
   items.forEach(s=>{
-    const w=(SOURCES[s.source]?.cred||1)*Math.max(1,Number(s.feedbackCount)||1);
+    const w=(SOURCES[s.source]?.cred||1)*Math.max(1,Number(s.feedbackCount)||1)*decay(s.date);
     const v=s.sentiment==='positive'?1:s.sentiment==='negative'?-1:0;
     ws+=v*w; wt+=w;
   });
@@ -562,6 +570,137 @@ const TrafficCompositeCard = ({ traffic }) => {
   );
 };
 
+// ── Sector Context Card ───────────────────────────────────────────────────────
+const SectorContextCard = ({ data, stock }) => {
+  const info = SECTOR_INFO[stock];
+  if (!info) return null;
+
+  // helper: calc simple composite for a stock (sentiment + traffic + news)
+  const calcSimpleComposite = (stk) => {
+    const sd2 = data.stocks[stk] || mkStock();
+    const HALF_LIFE=14;
+    const decay2 = d => Math.exp(-Math.LN2/HALF_LIFE*Math.max(0,(Date.now()-new Date(d+'T00:00:00').getTime())/86400000));
+    const CRED2={pantip:4,facebook:2,facebook_grp:2,twitter:3,google_rev:4,google_reviews:4,official:5,news:5,news_official:5,tiktok:2,shopee_rev:3};
+    let ws=0,wt=0;
+    (sd2.sentiments||[]).forEach(e=>{
+      const c=CRED2[e.source]||2;
+      const w=c*Math.max(1,e.feedbackCount||1)*decay2(e.date);
+      const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0;
+      ws+=v*w; wt+=w;
+    });
+    const sentS=wt?Math.round(ws/wt*100):null;
+    // traffic
+    const TRAFFIC_CFG2={google_trends:{w:0.35,max:100},similarweb:{w:0.30,max:5000},app_downloads:{w:0.20,max:500},google_reviews:{w:0.15,max:200},shopee_sales:{w:0.10,max:10000},manual_count:{w:0.05,max:100}};
+    const cut=new Date(); cut.setDate(cut.getDate()-30); const cutS=cut.toISOString().slice(0,10);
+    const latest2={};
+    (sd2.traffic||[]).filter(t=>t.date>=cutS).forEach(t=>{ if(!latest2[t.source]||t.date>latest2[t.source].date) latest2[t.source]=t; });
+    let tw=0,twt=0;
+    Object.entries(latest2).forEach(([src,e])=>{ const cfg=TRAFFIC_CFG2[src]; if(!cfg) return; tw+=cfg.w*Math.min(100,e.value/cfg.max*100); twt+=cfg.w; });
+    const trafS=twt?Math.round(tw/twt):null;
+    const trafSig=trafS!==null?Math.round((trafS-50)*2):null;
+    // news
+    let nws2=0,nwt2=0;
+    (sd2.news||[]).forEach(e=>{ const c=CRED2[e.source]||3; const w=c*decay2(e.date); const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0; nws2+=v*w; nwt2+=w; });
+    const newsS=nwt2?Math.round(nws2/nwt2*100):null;
+    const parts=[{s:sentS,w:0.40},{s:trafSig,w:0.25},{s:newsS,w:0.15}].filter(x=>x.s!==null);
+    if(!parts.length) return null;
+    const tw2=parts.reduce((a,b)=>a+b.w,0);
+    return Math.round(parts.reduce((a,b)=>a+b.s*b.w,0)/tw2);
+  };
+
+  const ratingLabel = s => {
+    if(s===null) return {label:'N/A',color:'#94a3b8',arrow:'—'};
+    if(s>=60)  return {label:'STRONG BUY', color:'#16a34a',arrow:'↑↑'};
+    if(s>=20)  return {label:'BUY',        color:'#22c55e',arrow:'↑'};
+    if(s>=-20) return {label:'HOLD',       color:'#d97706',arrow:'→'};
+    if(s>=-60) return {label:'SELL',       color:'#f97316',arrow:'↓'};
+    return            {label:'STRONG SELL',color:'#dc2626',arrow:'↓↓'};
+  };
+
+  if (info.sector === 'IT Retail' && info.peer) {
+    // IT Retail peer comparison
+    const thisScore = calcSimpleComposite(stock);
+    const peerScore = calcSimpleComposite(info.peer);
+    const thisR = ratingLabel(thisScore);
+    const peerR = ratingLabel(peerScore);
+    const diff = (thisScore !== null && peerScore !== null) ? thisScore - peerScore : null;
+    // z-score
+    const vals=[thisScore,peerScore].filter(v=>v!==null);
+    let zScore=null;
+    if(vals.length===2&&vals[0]!==vals[1]){
+      const mean=(vals[0]+vals[1])/2;
+      const std=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length);
+      zScore=std>0?Math.round(((thisScore-mean)/std)*10)/10:null;
+    }
+    const peerColor=SECTOR_INFO[info.peer]?.color||'#94a3b8';
+
+    return (
+      <Card style={{borderLeft:`3px solid ${info.color}`,background:'#fafffe'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:4,background:`${info.color}15`,color:info.color,border:`1px solid ${info.color}30`}}>
+            IT Retail Sector
+          </div>
+          <div style={{fontSize:11,color:'#64748b'}}>
+            {stock} vs {info.peer} · Pure-play peers · เปรียบเทียบตรงได้
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+          {[[stock,thisScore,thisR,info.color,true],[info.peer,peerScore,peerR,peerColor,false]].map(([s,score,r,col,isThis])=>(
+            <div key={s} style={{padding:'12px 14px',borderRadius:10,border:`2px solid ${isThis?col+'60':'#e2e8f0'}`,background:isThis?col+'08':'#f8fafc',position:'relative'}}>
+              {isThis&&<div style={{position:'absolute',top:8,right:8,fontSize:10,color:col,fontWeight:700}}>◀ selected</div>}
+              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:col}}/>
+                <span style={{fontWeight:700,fontSize:14,color:'#0f172a'}}>{s}</span>
+              </div>
+              <div style={{fontSize:32,fontWeight:800,fontFamily:'DM Mono,monospace',color:r.color,lineHeight:1}}>
+                {score!==null?(score>0?`+${score}`:score):'—'}
+              </div>
+              <div style={{fontSize:12,fontWeight:700,color:r.color,marginTop:2}}>{r.label} {r.arrow}</div>
+            </div>
+          ))}
+        </div>
+        {diff!==null&&(
+          <div style={{padding:'8px 12px',borderRadius:8,background:'#f1f5f9',border:'1px solid #e2e8f0',fontSize:12}}>
+            <span style={{color:'#64748b'}}>ส่วนต่าง: </span>
+            <strong style={{color:diff>=0?'#059669':'#dc2626'}}>{diff>0?`+${diff}`:diff} pts</strong>
+            <span style={{color:'#64748b'}}> · {stock} {diff>=0?'outperforms':'underperforms'} {info.peer}</span>
+            {zScore!==null&&<span style={{color:'#64748b'}}> · <strong style={{color:'#6366f1'}}>{zScore>0?`+${zScore}`:zScore}σ</strong></span>}
+          </div>
+        )}
+      </Card>
+    );
+  }
+
+  // JMART disclaimer card
+  return (
+    <Card style={{borderLeft:'3px solid #f59e0b',background:'#fffbeb'}}>
+      <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+        <span style={{fontSize:24,flexShrink:0}}>⚠️</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:700,color:'#92400e',marginBottom:6}}>
+            Diversified Stock — ระวังเปรียบเทียบตรงกับ ADVICE/COM7
+          </div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+            {[
+              {label:'IT Retail',  pct:'40%', color:'#f59e0b'},
+              {label:'JMT Network',pct:'35%', color:'#8b5cf6'},
+              {label:'Singer Finance',pct:'25%',color:'#06b6d4'},
+            ].map(seg=>(
+              <div key={seg.label} style={{padding:'5px 12px',borderRadius:8,background:`${seg.color}15`,border:`1px solid ${seg.color}40`}}>
+                <div style={{fontSize:11,fontWeight:700,color:seg.color}}>{seg.pct}</div>
+                <div style={{fontSize:10,color:'#64748b'}}>{seg.label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:'#92400e',lineHeight:1.5}}>
+            Social listening ครอบคลุมแค่ IT retail segment เท่านั้น — signal ที่เห็นไม่ reflect ทั้ง JMT debt collection และ Singer Finance operations
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 const OverviewTab = ({ data, stock }) => {
   const sd = data.stocks[stock] || mkStock();
@@ -579,6 +718,8 @@ const OverviewTab = ({ data, stock }) => {
 
   return (
     <div style={{display:'grid',gap:20,animation:'fadeUp .2s ease'}}>
+      {/* Sector context card */}
+      <SectorContextCard data={data} stock={stock}/>
       <Card>
         <SH title={`สัญญาณรวม · ${stock}`} sub="Weighted signal รวมจากทุกแหล่ง" right={<SignalBadge score={overall} size="lg"/>}/>
         <Gauge score={overall}/>
@@ -1612,6 +1753,10 @@ const App = () => {
           <div style={{width:1,height:22,background:C.border}}/>
           <a href="index.html" style={{fontSize:12,color:C.indigo,textDecoration:'none',fontWeight:600}}>← Portfolio</a>
           <a href="monitor.html" style={{fontSize:12,color:'#10b981',textDecoration:'none',fontWeight:600,background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:6,padding:'3px 10px'}}>📊 Monitor</a>
+          {/* sector badge */}
+          <div style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:4,background:`${SECTOR_INFO[stock]?.color||'#6366f1'}20`,color:SECTOR_INFO[stock]?.color||'#6366f1',border:`1px solid ${SECTOR_INFO[stock]?.color||'#6366f1'}40`}}>
+            {SECTOR_INFO[stock]?.sector||''}
+          </div>
           <div style={{display:'flex',gap:5}}>
             {data.config.trackedStocks.map(s=>(
               <button key={s} onClick={()=>setStock(s)}

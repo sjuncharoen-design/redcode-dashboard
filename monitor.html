@@ -17,10 +17,28 @@ body{font-family:'DM Sans','Noto Sans Thai',sans-serif;background:#0f172a;color:
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState,useEffect,useRef}=React;
+const {useState,useEffect,useRef,useMemo}=React;
+
+// ─── sector definitions ───────────────────────────────────────────────────────
+const SECTORS={
+  IT_RETAIL:{
+    label:'IT Retail',
+    stocks:['ADVICE','COM7'],
+    desc:'Pure-play electronics retail — comparable peers',
+    icon:'📡',
+  },
+  DIVERSIFIED:{
+    label:'Diversified Consumer/Financial',
+    stocks:['JMART'],
+    desc:'IT retail 40% · JMT debt 35% · Singer Finance 25%',
+    icon:'🏢',
+  },
+};
 
 const STOCKS=['ADVICE','COM7','JMART'];
 const STOCK_COLOR={'ADVICE':'#6366f1','COM7':'#10b981','JMART':'#f59e0b'};
+const STOCK_SECTOR={ADVICE:'IT_RETAIL',COM7:'IT_RETAIL',JMART:'DIVERSIFIED'};
+
 const TRAFFIC_CFG={
   google_trends: {label:'Google Trends',w:0.35,max:100},
   similarweb:    {label:'SimilarWeb',   w:0.30,max:5000},
@@ -38,19 +56,11 @@ function loadSocial(){
 }
 function getSD(data,stock){ return data?.stocks?.[stock]||{prices:[],sentiments:[],traffic:[],news:[]}; }
 
-function calcSentiment(sentiments){
-  if(!sentiments?.length) return null;
-  let ws=0,wt=0;
-  sentiments.forEach(e=>{
-    const c=CRED[e.source]||2;
-    const w=c*Math.max(1,e.feedbackCount||1);
-    const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0;
-    ws+=v*w; wt+=w;
-  });
-  return wt? Math.round(ws/wt*100) : null;
-}
+// ─── time decay ───────────────────────────────────────────────────────────────
+const decay=d=>Math.exp(-Math.LN2/14*Math.max(0,(Date.now()-new Date(d).getTime())/86400000));
 
-function calcTraffic(traffic){
+// ─── calcTrafficLevel (0-100) ─────────────────────────────────────────────────
+function calcTrafficLevel(traffic){
   if(!traffic?.length) return null;
   const cutDate=new Date(); cutDate.setDate(cutDate.getDate()-30);
   const cut=cutDate.toISOString().slice(0,10);
@@ -66,7 +76,8 @@ function calcTraffic(traffic){
   return wt? Math.round(ws/wt) : null;
 }
 
-function calcPromoAlert(prices){
+// ─── calcPromoSignal (-100 to +100) ──────────────────────────────────────────
+function calcPromoSignal(prices){
   if(!prices?.length) return null;
   const monday=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
   const byWeek={};
@@ -80,277 +91,268 @@ function calcPromoAlert(prices){
   if(weeks.length<2) return null;
   const cur=byWeek[weeks[weeks.length-1]].sum/byWeek[weeks[weeks.length-1]].n;
   const base=weeks.slice(0,-1).reduce((s,w)=>s+byWeek[w].sum/byWeek[w].n,0)/(weeks.length-1);
-  return {cur:Math.round(cur*10)/10,base:Math.round(base*10)/10,ratio:cur/base,alert:cur/base>=1.25};
+  if(!base) return null;
+  const ratio=cur/base;
+  // ratio=1.0→0, ratio>1.5→-100, ratio<0.7→+50
+  if(ratio>=1.5) return -100;
+  if(ratio<=0.7) return 50;
+  if(ratio>=1.0) return Math.round(-(ratio-1.0)/0.5*100);
+  return Math.round((1.0-ratio)/0.3*50);
 }
 
-function signalLabel(score){
-  if(score===null) return {emoji:'⚫',label:'ไม่มีข้อมูล',color:'#64748b'};
-  if(score>=20)   return {emoji:'🟢',label:'Bullish',color:'#22c55e'};
-  if(score<=-20)  return {emoji:'🔴',label:'Bearish',color:'#ef4444'};
-  return {emoji:'🟡',label:'Neutral',color:'#eab308'};
+// ─── multi-factor signal ──────────────────────────────────────────────────────
+function calcSignal(data,stock){
+  const sd=data?.stocks?.[stock]||{};
+
+  // Factor 1: Sentiment (40%) — credibility × feedback × time-decay
+  let ws=0,wt=0;
+  (sd.sentiments||[]).forEach(e=>{
+    const c=CRED[e.source]||2;
+    const w=c*Math.max(1,e.feedbackCount||1)*decay(e.date);
+    const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0;
+    ws+=v*w; wt+=w;
+  });
+  const sentScore=wt?Math.round(ws/wt*100):null;
+
+  // Factor 2: Traffic (25%)
+  const trafRaw=calcTrafficLevel(sd.traffic);
+  const trafScore=trafRaw!==null?Math.round((trafRaw-50)*2):null;
+
+  // Factor 3: Promo discipline (20%)
+  const promoScore=calcPromoSignal(sd.prices);
+
+  // Factor 4: News flow (15%)
+  let nws=0,nwt=0;
+  (sd.news||[]).forEach(e=>{
+    const c=CRED[e.source]||3;
+    const w=c*decay(e.date);
+    const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0;
+    nws+=v*w; nwt+=w;
+  });
+  const newsScore=nwt?Math.round(nws/nwt*100):null;
+
+  // Weighted composite
+  const WEIGHTS=[{s:sentScore,w:0.40},{s:trafScore,w:0.25},{s:promoScore,w:0.20},{s:newsScore,w:0.15}];
+  let cws=0,cwt=0;
+  WEIGHTS.forEach(({s,w})=>{ if(s!==null){cws+=s*w; cwt+=w;} });
+  const composite=cwt?Math.round(cws/cwt):null;
+
+  // Conviction
+  const sentItems=sd.sentiments||[];
+  const sources=new Set(sentItems.map(e=>e.source)).size;
+  const scores=sentItems.map(e=>e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0);
+  const mean=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;
+  const std=scores.length>1?Math.sqrt(scores.reduce((a,b)=>a+(b-mean)**2,0)/scores.length):1;
+  const conviction=sentItems.length>=4&&sources>=3&&std<0.5?'HIGH':sentItems.length>=2&&sources>=2?'MED':'LOW';
+
+  // Staleness
+  const allDates=[...(sd.sentiments||[]),...(sd.prices||[]),...(sd.traffic||[]),...(sd.news||[])].map(e=>e.date).sort().reverse();
+  const staleDays=allDates.length?Math.floor((Date.now()-new Date(allDates[0]).getTime())/86400000):null;
+
+  const factors=[
+    {key:'sent', label:'Sentiment', icon:'💬', score:sentScore,  w:0.40},
+    {key:'traf', label:'Traffic',   icon:'📈', score:trafScore,  w:0.25},
+    {key:'promo',label:'Promo Disc',icon:'🏷️', score:promoScore, w:0.20},
+    {key:'news', label:'News Flow', icon:'📰', score:newsScore,  w:0.15},
+  ];
+  return {composite,factors,conviction,staleDays};
 }
+
+// ─── peer z-score ─────────────────────────────────────────────────────────────
+function calcPeerZ(data,stock,sectorStocks){
+  const vals=sectorStocks.map(s=>calcSignal(data,s).composite).filter(v=>v!==null);
+  if(vals.length<2) return null;
+  const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const std=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length);
+  const val=calcSignal(data,stock).composite;
+  return (val!==null&&std>0)?Math.round((val-mean)/std*10)/10:null;
+}
+
+// ─── signal rating ────────────────────────────────────────────────────────────
+function signalRating(score){
+  if(score===null) return {label:'N/A',       color:'#475569',bg:'#1e293b'};
+  if(score>=60)    return {label:'STRONG BUY', color:'#16a34a',bg:'#052e16'};
+  if(score>=20)    return {label:'BUY',        color:'#22c55e',bg:'#052e16'};
+  if(score>=-20)   return {label:'HOLD',       color:'#eab308',bg:'#1c1400'};
+  if(score>=-60)   return {label:'SELL',       color:'#f97316',bg:'#1c0a00'};
+  return               {label:'STRONG SELL',   color:'#ef4444',bg:'#200000'};
+}
+
 function timeAgo(d){
-  if(!d) return '—';
-  const n=Math.floor((Date.now()-new Date(d).getTime())/86400000);
-  return n===0?'วันนี้':n===1?'เมื่อวาน':`${n} วันที่แล้ว`;
+  if(d===null||d===undefined) return '—';
+  const n=Math.floor((Date.now()-new Date(d*86400000+Date.now()%86400000).getTime())/86400000);
+  // d is already days
+  return d===0?'วันนี้':d===1?'เมื่อวาน':`${d} วันที่แล้ว`;
 }
 
-// ─── primitive UI ─────────────────────────────────────────────────────────────
-function Sparkline({points,color='#38bdf8',w=100,h=28}){
-  if(!points||points.length<2) return <span style={{color:'#475569',fontSize:11}}>—</span>;
-  const mn=Math.min(...points),mx=Math.max(...points),rng=mx-mn||1;
-  const pts=points.map((v,i)=>`${Math.round(i/(points.length-1)*(w-4)+2)},${Math.round((1-(v-mn)/rng)*(h-4)+2)}`).join(' ');
-  const last=pts.split(' ').pop().split(',');
-  const tc=points[points.length-1]>points[0]?'#22c55e':points[points.length-1]<points[0]?'#ef4444':'#64748b';
+// ─── conviction badge ─────────────────────────────────────────────────────────
+function ConvictionBadge({conviction}){
+  const map={HIGH:{c:'#22c55e',bg:'#052e16'},MED:{c:'#eab308',bg:'#1c1400'},LOW:{c:'#64748b',bg:'#1e293b'}};
+  const s=map[conviction]||map.LOW;
   return(
-    <svg width={w} height={h} style={{display:'block'}}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx={last[0]} cy={last[1]} r="3" fill={tc}/>
-    </svg>
+    <span style={{padding:'2px 8px',borderRadius:4,background:s.bg,color:s.c,fontSize:11,fontWeight:700,border:`1px solid ${s.c}40`}}>
+      {conviction} conviction
+    </span>
   );
 }
 
-function GaugeArc({score,size=82}){
-  const pct=Math.max(0,Math.min(1,(score+100)/200));
-  const R=size*0.42,cx=size/2,cy=size/2;
-  const sA=-Math.PI*0.8,eA=Math.PI*0.8;
-  const ang=sA+(eA-sA)*pct;
-  const p=(a)=>({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)});
-  const s=p(sA),e=p(eA),c=p(ang);
+// ─── diverging factor bar ─────────────────────────────────────────────────────
+function FactorBar({icon,label,score,weight}){
+  if(score===null) return(
+    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
+      <span style={{fontSize:13}}>{icon}</span>
+      <span style={{fontSize:11,color:'#64748b',width:72}}>{label}</span>
+      <div style={{flex:1,height:6,background:'#1e293b',borderRadius:3}}/>
+      <span style={{fontSize:10,color:'#475569',width:28,textAlign:'right'}}>—</span>
+      <span style={{fontSize:10,color:'#334155',width:28,textAlign:'right'}}>{Math.round(weight*100)}%</span>
+    </div>
+  );
+  const pct=Math.max(0,Math.min(100,Math.abs(score)));
+  const positive=score>=0;
   const color=score>=20?'#22c55e':score<=-20?'#ef4444':'#eab308';
   return(
-    <svg width={size} height={size} style={{display:'block',margin:'0 auto'}}>
-      <path d={`M${s.x},${s.y} A${R},${R} 0 1 1 ${e.x},${e.y}`} fill="none" stroke="#334155" strokeWidth="6" strokeLinecap="round"/>
-      <path d={`M${s.x},${s.y} A${R},${R} 0 ${pct>0.5?1:0} 1 ${c.x},${c.y}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"/>
-      <text x={cx} y={cy+4} textAnchor="middle" fontSize={size*0.22} fontWeight="700" fill={color} fontFamily="DM Mono,monospace">{score>0?'+':''}{score}</text>
-      <text x={cx} y={cy+size*0.22} textAnchor="middle" fontSize={size*0.12} fill="#64748b" fontFamily="DM Sans,sans-serif">sentiment</text>
-    </svg>
-  );
-}
-
-function MiniBar({value,max=100,color,label,sub}){
-  const pct=Math.max(0,Math.min(100,value/max*100));
-  return(
-    <div style={{marginBottom:5}}>
-      {(label||sub)&&<div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#94a3b8',marginBottom:2}}>
-        <span>{label}</span><span style={{fontFamily:'DM Mono',color:'#e2e8f0'}}>{sub}</span>
-      </div>}
-      <div style={{background:'#334155',borderRadius:3,height:5}}>
-        <div style={{width:`${pct}%`,height:'100%',borderRadius:3,background:color,transition:'width .4s'}}/>
+    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
+      <span style={{fontSize:13}}>{icon}</span>
+      <span style={{fontSize:11,color:'#94a3b8',width:72}}>{label}</span>
+      <div style={{flex:1,height:6,background:'#1e293b',borderRadius:3,position:'relative'}}>
+        {/* center line */}
+        <div style={{position:'absolute',left:'50%',top:0,width:1,height:'100%',background:'#334155'}}/>
+        {positive?(
+          <div style={{position:'absolute',left:'50%',width:`${pct/2}%`,height:'100%',background:color,borderRadius:'0 3px 3px 0',transition:'width .4s'}}/>
+        ):(
+          <div style={{position:'absolute',right:'50%',width:`${pct/2}%`,height:'100%',background:color,borderRadius:'3px 0 0 3px',transition:'width .4s'}}/>
+        )}
       </div>
+      <span style={{fontSize:11,fontFamily:'DM Mono,monospace',color,width:36,textAlign:'right'}}>{score>0?`+${score}`:score}</span>
+      <span style={{fontSize:10,color:'#475569',width:28,textAlign:'right'}}>{Math.round(weight*100)}%</span>
     </div>
   );
 }
 
-function AlertBadge({type,text}){
-  const S={warning:{bg:'#451a03',bc:'#92400e',c:'#fbbf24',icon:'⚠️'},good:{bg:'#052e16',bc:'#166534',c:'#4ade80',icon:'✅'},neutral:{bg:'#1e293b',bc:'#334155',c:'#94a3b8',icon:'⚪'}};
-  const s=S[type]||S.neutral;
-  return(
-    <div style={{background:s.bg,border:`1px solid ${s.bc}`,borderRadius:6,padding:'4px 8px',fontSize:11,color:s.c,display:'inline-flex',alignItems:'center',gap:4,marginRight:4,marginBottom:4}}>
-      {s.icon} {text}
-    </div>
-  );
-}
-
-// ─── sector heatmap ───────────────────────────────────────────────────────────
-function heatBg(norm){
-  if(norm===null) return '#1e293b';
-  const h=Math.round(norm*1.2); // 0=red, 60=yellow, 120=green
-  return `hsl(${h},55%,22%)`;
-}
-function heatText(norm){
-  if(norm===null) return '#475569';
-  return norm>=60?'#86efac':norm>=35?'#fde68a':'#fca5a5';
-}
-
-function SectorHeatmap({data}){
-  const COLS=[
-    {key:'sent',   label:'Sentiment', sub:'−100→+100', tip:'ถ่วงน้ำหนักความน่าเชื่อถือ'},
-    {key:'traf',   label:'Traffic',   sub:'0→100',     tip:'composite หลายแหล่ง'},
-    {key:'promo',  label:'Promo Δ',   sub:'vs baseline',tip:'>+25% = ⚠️'},
-    {key:'newsPos',label:'News+',     sub:'% ข่าวบวก', tip:'% ข่าวเชิงบวก'},
-    {key:'verif',  label:'Verified',  sub:'% ยืนยัน',  tip:'% entry ที่ verify แล้ว'},
-    {key:'cov',    label:'Coverage',  sub:'หมวด/4',    tip:'มีข้อมูลครบแค่ไหน'},
-  ];
-
-  function getRow(stock){
-    const sd=getSD(data,stock);
-    const sent=calcSentiment(sd.sentiments);
-    const traf=calcTraffic(sd.traffic);
-    const promo=calcPromoAlert(sd.prices);
-    const news=sd.news||[];
-    const newsPos=news.length? Math.round(news.filter(n=>n.sentiment==='positive').length/news.length*100) : null;
-    const all=[...(sd.prices||[]),...(sd.sentiments||[]),...(sd.traffic||[]),...(sd.news||[])];
-    const verif=all.length? Math.round(all.filter(e=>e.verified).length/all.length*100) : null;
-    const cats=[(sd.prices||[]).length,(sd.sentiments||[]).length,(sd.traffic||[]).length,(sd.news||[]).length].filter(Boolean).length;
-    const cov=Math.round(cats/4*100);
-
-    // norm 0-100 (100=best)
-    const promoNorm = promo ? Math.max(0, Math.round(100-(promo.ratio-1)*200)) : null;
-    return {
-      sent:    {val:sent,   norm:sent!==null?(sent+100)/2:null,           fmt:sent!==null?(sent>0?`+${sent}`:`${sent}`):'—'},
-      traf:    {val:traf,   norm:traf,                                     fmt:traf!==null?`${traf}/100`:'—'},
-      promo:   {val:promo?.ratio, norm:promoNorm,                          fmt:promo?`${Math.round((promo.ratio-1)*100)>0?'+':''}${Math.round((promo.ratio-1)*100)}%`:'—', alert:promo?.alert},
-      newsPos: {val:newsPos, norm:newsPos,                                 fmt:newsPos!==null?`${newsPos}%`:'—'},
-      verif:   {val:verif,  norm:verif,                                    fmt:verif!==null?`${verif}%`:'—'},
-      cov:     {val:cov,    norm:cov,                                      fmt:`${cats}/4`},
-    };
-  }
-
-  const rows=STOCKS.map(s=>({stock:s,m:getRow(s)}));
-
-  const thSt={padding:'8px 10px',fontSize:11,fontWeight:700,color:'#64748b',textAlign:'center',background:'#0f172a',textTransform:'uppercase',letterSpacing:.5};
-  return(
-    <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'18px 20px',marginBottom:16,overflowX:'auto'}}>
-      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:14}}>🌡️ Sector Heatmap</div>
-      <table style={{width:'100%',borderCollapse:'separate',borderSpacing:3}}>
-        <thead>
-          <tr>
-            <th style={{...thSt,textAlign:'left',minWidth:80}}>Stock</th>
-            {COLS.map(c=>(
-              <th key={c.key} style={{...thSt,minWidth:80}} title={c.tip}>
-                <div>{c.label}</div>
-                <div style={{fontSize:9,color:'#475569',fontWeight:400,marginTop:1}}>{c.sub}</div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({stock,m})=>{
-            const color=STOCK_COLOR[stock];
-            return(
-              <tr key={stock}>
-                <td style={{padding:'8px 10px'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:7}}>
-                    <div style={{width:8,height:8,borderRadius:'50%',background:color,boxShadow:`0 0 6px ${color}`}}/>
-                    <span style={{fontWeight:700,color:'#f1f5f9',fontSize:13}}>{stock}</span>
-                  </div>
-                </td>
-                {COLS.map(c=>{
-                  const cell=m[c.key];
-                  const bg=heatBg(cell.norm);
-                  const tc=heatText(cell.norm);
-                  return(
-                    <td key={c.key} style={{background:bg,borderRadius:6,padding:'8px 6px',textAlign:'center',border:'2px solid #0f172a'}}>
-                      <div style={{fontFamily:'DM Mono',fontSize:13,fontWeight:700,color:tc}}>{cell.fmt}</div>
-                      {cell.alert&&<div style={{fontSize:9,color:'#fbbf24',marginTop:1}}>⚠️ spike</div>}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div style={{display:'flex',gap:16,marginTop:10,fontSize:10,color:'#64748b'}}>
-        <span style={{color:'#86efac'}}>■ ≥60 ดี</span>
-        <span style={{color:'#fde68a'}}>■ 35–59 กลางๆ</span>
-        <span style={{color:'#fca5a5'}}>■ &lt;35 ต้องปรับ</span>
-        <span style={{color:'#475569'}}>■ — ไม่มีข้อมูล</span>
-      </div>
-    </div>
-  );
-}
-
-// ─── stock card ──────────────────────────────────────────────────────────────
-function StockCard({stock,sd}){
+// ─── stock signal card ────────────────────────────────────────────────────────
+function StockSignalCard({stock,data,sectorStocks,showZ}){
   const color=STOCK_COLOR[stock];
-  const prices   =sd?.prices||[];
-  const sentiments=sd?.sentiments||[];
-  const traffic  =sd?.traffic||[];
-  const news     =sd?.news||[];
-
-  const sentScore=calcSentiment(sentiments);
-  const sig=signalLabel(sentScore);
-  const trafficScore=calcTraffic(traffic);
-  const promo=calcPromoAlert(prices);
-
-  const weeklyScores=(()=>{
-    const mon=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
-    const byW={};
-    sentiments.forEach(e=>{
-      const w=mon(e.date); if(!byW[w]) byW[w]=[];
-      byW[w].push(e.sentiment==='positive'?100:e.sentiment==='negative'?-100:0);
-    });
-    return Object.keys(byW).sort().slice(-6).map(w=>byW[w].reduce((s,v)=>s+v,0)/byW[w].length);
-  })();
-
-  const byProduct={};
-  prices.forEach(e=>{if(!byProduct[e.product])byProduct[e.product]=[];byProduct[e.product].push(e);});
-  const topProducts=Object.keys(byProduct).slice(0,3);
-  const latestPrices={};
-  topProducts.forEach(p=>{latestPrices[p]=[...byProduct[p]].sort((a,b)=>b.date.localeCompare(a.date))[0];});
-
-  const allDates=[...prices,...sentiments,...traffic].map(e=>e.date).sort().reverse();
-  const lastUpdated=allDates[0];
-
-  const alerts=[];
-  if(promo?.alert) alerts.push({type:'warning',text:`โปร +${Math.round((promo.ratio-1)*100)}%`});
-  if(sentScore!==null&&sentScore<=-30) alerts.push({type:'warning',text:'Sentiment ต่ำ'});
-  if(sentScore!==null&&sentScore>=40)  alerts.push({type:'good',   text:'Sentiment สูง'});
-  if(trafficScore!==null&&trafficScore>=70) alerts.push({type:'good',text:`Traffic ${trafficScore}`});
-  if(trafficScore!==null&&trafficScore<=30) alerts.push({type:'warning',text:`Traffic ต่ำ ${trafficScore}`});
-  if(news.filter(n=>n.sentiment==='negative').length>=2) alerts.push({type:'warning',text:'ข่าวลบ'});
-  if(!alerts.length) alerts.push({type:'neutral',text:'ปกติ'});
+  const {composite,factors,conviction,staleDays}=useMemo(()=>calcSignal(data,stock),[data,stock]);
+  const rating=signalRating(composite);
+  const peerZ=showZ&&sectorStocks?calcPeerZ(data,stock,sectorStocks):null;
+  const stale=staleDays!==null&&staleDays>7;
 
   return(
-    <div style={{background:'#1e293b',border:`1px solid #334155`,borderRadius:12,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-      <div style={{background:`${color}18`,borderBottom:`2px solid ${color}`,padding:'12px 16px',display:'flex',alignItems:'center',gap:10}}>
-        <div style={{width:9,height:9,borderRadius:'50%',background:color,boxShadow:`0 0 8px ${color}`}}/>
-        <span style={{fontWeight:700,fontSize:17,color:'#f1f5f9'}}>{stock}</span>
-        <span style={{marginLeft:'auto',fontSize:11,color:'#64748b'}}>{timeAgo(lastUpdated)}</span>
+    <div style={{background:'#1e293b',border:`1px solid ${stale?'#92400e':'#334155'}`,borderRadius:12,overflow:'hidden',display:'flex',flexDirection:'column',minWidth:0}}>
+      {/* header */}
+      <div style={{background:`${color}18`,borderBottom:`2px solid ${color}`,padding:'10px 14px',display:'flex',alignItems:'center',gap:8}}>
+        <div style={{width:8,height:8,borderRadius:'50%',background:color,boxShadow:`0 0 8px ${color}`}}/>
+        <span style={{fontWeight:700,fontSize:16,color:'#f1f5f9'}}>{stock}</span>
+        {staleDays!==null&&(
+          <span style={{fontSize:10,color:stale?'#fbbf24':'#475569',marginLeft:'auto'}}>
+            {staleDays===0?'วันนี้':staleDays===1?'เมื่อวาน':`${staleDays}d ago`}
+          </span>
+        )}
       </div>
-      <div style={{padding:'14px 16px',flex:1,display:'flex',flexDirection:'column',gap:14}}>
 
-        <div style={{display:'flex',alignItems:'center',gap:14}}>
-          <GaugeArc score={sentScore??0} size={86}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:20}}>{sig.emoji}</div>
-            <div style={{fontWeight:700,fontSize:15,color:sig.color,marginBottom:2}}>{sig.label}</div>
-            <div style={{fontSize:11,color:'#64748b',marginBottom:6}}>จาก {sentiments.length} แหล่ง</div>
-            {weeklyScores.length>=2&&<>
-              <Sparkline points={weeklyScores} color={sig.color} w={88} h={26}/>
-              <div style={{fontSize:10,color:'#475569'}}>6 สัปดาห์</div>
-            </>}
+      {stale&&(
+        <div style={{background:'#451a03',borderBottom:'1px solid #92400e',padding:'5px 14px',fontSize:11,color:'#fbbf24'}}>
+          ⚠️ ข้อมูลเก่ากว่า 7 วัน — ความแม่นยำลดลง
+        </div>
+      )}
+
+      <div style={{padding:'14px',flex:1,display:'flex',flexDirection:'column',gap:12}}>
+        {/* composite score + rating */}
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={{textAlign:'center',flexShrink:0}}>
+            <div style={{fontSize:42,fontWeight:800,fontFamily:'DM Mono,monospace',color:rating.color,lineHeight:1}}>
+              {composite!==null?(composite>0?`+${composite}`:composite):'—'}
+            </div>
+            <div style={{fontSize:10,color:'#64748b',marginTop:2}}>composite</div>
           </div>
-        </div>
-
-        <div>
-          <div style={{fontSize:11,color:'#475569',marginBottom:4}}>สัญญาณ</div>
-          {alerts.map((a,i)=><AlertBadge key={i} type={a.type} text={a.text}/>)}
-        </div>
-
-        {trafficScore!==null&&<MiniBar value={trafficScore} max={100}
-          color={trafficScore>=60?'#22c55e':trafficScore>=40?'#eab308':'#ef4444'}
-          label="Traffic" sub={`${trafficScore}/100`}/>}
-
-        {promo&&(
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <div style={{fontSize:18}}>{promo.alert?'🔥':'⚪'}</div>
-            <div>
-              <div style={{fontSize:12,fontFamily:'DM Mono',color:promo.alert?'#fbbf24':'#94a3b8'}}>
-                สัปดาห์นี้: {promo.cur} / base: {promo.base}
-              </div>
-              {promo.alert&&<div style={{fontSize:11,color:'#f59e0b'}}>โปรเพิ่ม {Math.round((promo.ratio-1)*100)}%</div>}
+          <div style={{flex:1}}>
+            <div style={{padding:'5px 10px',borderRadius:6,background:rating.bg,display:'inline-block',marginBottom:6}}>
+              <span style={{fontWeight:800,fontSize:13,color:rating.color}}>{rating.label}</span>
+            </div>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              <ConvictionBadge conviction={conviction}/>
+              {peerZ!==null&&(
+                <span style={{padding:'2px 8px',borderRadius:4,background:'#0f172a',color:'#94a3b8',fontSize:11,fontWeight:700,border:'1px solid #334155'}}>
+                  vs peers: {peerZ>0?`+${peerZ}`:peerZ}σ
+                </span>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
-        {topProducts.length>0&&(
-          <div>
-            <div style={{fontSize:11,color:'#475569',marginBottom:5}}>ราคาล่าสุด</div>
-            {topProducts.map(p=>{
-              const e=latestPrices[p];
-              return(
-                <div key={p} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'4px 8px',background:'#0f172a',borderRadius:5,marginBottom:3}}>
-                  <span style={{color:'#94a3b8',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p}</span>
-                  <span style={{fontFamily:'DM Mono',color:'#f1f5f9',marginLeft:8}}>{e?.price?`฿${e.price.toLocaleString()}`:'—'}</span>
-                  {e?.verified&&<span style={{color:'#22c55e',fontSize:10,marginLeft:4}}>✓</span>}
-                </div>
-              );
-            })}
+        {/* factor bars */}
+        <div style={{borderTop:'1px solid #334155',paddingTop:10}}>
+          <div style={{fontSize:10,color:'#475569',marginBottom:7,textTransform:'uppercase',letterSpacing:.5,display:'flex',justifyContent:'space-between'}}>
+            <span>Factor breakdown</span>
+            <span style={{color:'#334155'}}>neg ← 0 → pos</span>
+          </div>
+          {factors.map(f=>(
+            <FactorBar key={f.key} icon={f.icon} label={f.label} score={f.score} weight={f.w}/>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── sector block ─────────────────────────────────────────────────────────────
+function SectorBlock({sectorKey,data}){
+  const sector=SECTORS[sectorKey];
+  const isIT=sectorKey==='IT_RETAIL';
+  const borderColor=isIT?'#6366f1':'#f59e0b';
+  return(
+    <div style={{background:'#1e293b',border:`1px solid ${borderColor}40`,borderRadius:14,marginBottom:14,overflow:'hidden'}}>
+      {/* sector header */}
+      <div style={{background:`${borderColor}12`,borderBottom:`1px solid ${borderColor}30`,padding:'12px 18px',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+        <span style={{fontSize:16}}>{sector.icon}</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9'}}>{sector.label} Sector</div>
+          <div style={{fontSize:11,color:'#64748b'}}>{sector.desc}</div>
+        </div>
+        {isIT&&(
+          <div style={{fontSize:11,padding:'3px 10px',borderRadius:6,background:'#052e16',color:'#22c55e',border:'1px solid #166534'}}>
+            Pure-play peers · z-score เปรียบเทียบได้
           </div>
         )}
+        {!isIT&&(
+          <div style={{fontSize:11,padding:'3px 10px',borderRadius:6,background:'#451a03',color:'#fbbf24',border:'1px solid #92400e'}}>
+            ⚠️ ไม่ใช่ IT Retail pure-play
+          </div>
+        )}
+      </div>
+
+      {/* JMART disclaimer */}
+      {!isIT&&(
+        <div style={{background:'#1c0800',borderBottom:'1px solid #78350f',padding:'10px 18px',display:'flex',alignItems:'flex-start',gap:10}}>
+          <span style={{fontSize:18,flexShrink:0}}>⚠️</span>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:'#fbbf24',marginBottom:2}}>ระวัง: JMART ไม่ใช่ IT Retail pure-play — ไม่ควรเปรียบเทียบตรงกับ ADVICE/COM7</div>
+            <div style={{fontSize:11,color:'#92400e'}}>
+              Segment mix: <strong style={{color:'#fb923c'}}>IT Retail 40%</strong> · JMT Network (debt collection) 35% · Singer Finance 25%
+              · Social listening ครอบคลุมแค่ IT retail segment เท่านั้น
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* cards */}
+      <div style={{padding:'14px 18px'}}>
+        {isIT&&(
+          <div style={{fontSize:11,color:'#475569',marginBottom:10,textTransform:'uppercase',letterSpacing:.5}}>
+            Peer comparison — ADVICE vs COM7
+          </div>
+        )}
+        <div style={{display:'grid',gridTemplateColumns:`repeat(${sector.stocks.length},1fr)`,gap:12}}>
+          {sector.stocks.map(s=>(
+            <StockSignalCard
+              key={s}
+              stock={s}
+              data={data}
+              sectorStocks={isIT?sector.stocks:null}
+              showZ={isIT}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -360,14 +362,26 @@ function StockCard({stock,sd}){
 function AlertsPanel({data}){
   const rows=[];
   STOCKS.forEach(stock=>{
-    const sd=getSD(data,stock);
-    const promo=calcPromoAlert(sd.prices);
-    const score=calcSentiment(sd.sentiments);
-    const tScore=calcTraffic(sd.traffic);
-    if(promo?.alert)         rows.push({stock,type:'warning',text:`โปรโมชั่นเพิ่มขึ้น ${Math.round((promo.ratio-1)*100)}% จาก baseline`,icon:'🔥'});
-    if(score!==null&&score<=-30) rows.push({stock,type:'warning',text:`Sentiment ต่ำมาก (${score})`,icon:'📉'});
-    if(score!==null&&score>=40)  rows.push({stock,type:'good',   text:`Sentiment ดี (+${score})`,  icon:'📈'});
-    if(tScore!==null&&tScore<=25) rows.push({stock,type:'warning',text:`Traffic ต่ำมาก (${tScore}/100)`,icon:'👥'});
+    const {composite,staleDays}=calcSignal(data,stock);
+    const sd=data?.stocks?.[stock]||{};
+    // promo alert
+    const monday=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
+    const byWeek={};
+    (sd.prices||[]).forEach(e=>{
+      if(!e.promoScore) return;
+      const w=monday(e.date);
+      if(!byWeek[w]) byWeek[w]={sum:0,n:0};
+      byWeek[w].sum+=e.promoScore; byWeek[w].n++;
+    });
+    const weeks=Object.keys(byWeek).sort();
+    if(weeks.length>=2){
+      const cur=byWeek[weeks[weeks.length-1]].sum/byWeek[weeks[weeks.length-1]].n;
+      const base=weeks.slice(0,-1).reduce((s,w)=>s+byWeek[w].sum/byWeek[w].n,0)/(weeks.length-1);
+      if(base&&cur/base>=1.25) rows.push({stock,type:'warning',text:`โปร +${Math.round((cur/base-1)*100)}% จาก baseline — margin pressure`,icon:'🔥'});
+    }
+    if(composite!==null&&composite<=-30) rows.push({stock,type:'warning',text:`Composite signal ต่ำ (${composite}) — SELL territory`,icon:'📉'});
+    if(composite!==null&&composite>=40)  rows.push({stock,type:'good',   text:`Composite signal สูง (+${composite}) — BUY territory`,   icon:'📈'});
+    if(staleDays!==null&&staleDays>7)    rows.push({stock,type:'warning',text:`ข้อมูลเก่า ${staleDays} วัน — ควรอัพเดต`,icon:'⏰'});
   });
   if(!rows.length) return(
     <div style={{background:'#052e16',border:'1px solid #166534',borderRadius:8,padding:'10px 14px',color:'#4ade80',fontSize:13}}>
@@ -393,10 +407,171 @@ function AlertsPanel({data}){
   );
 }
 
+// ─── sector heatmap ───────────────────────────────────────────────────────────
+function heatBg(norm){
+  if(norm===null) return '#1e293b';
+  const h=Math.round(norm*1.2);
+  return `hsl(${h},55%,22%)`;
+}
+function heatText(norm){
+  if(norm===null) return '#475569';
+  return norm>=60?'#86efac':norm>=35?'#fde68a':'#fca5a5';
+}
+
+function HeatmapWithSector({data}){
+  const COLS=[
+    {key:'sent',   label:'Sentiment', sub:'−100→+100'},
+    {key:'traf',   label:'Traffic',   sub:'0→100'},
+    {key:'promo',  label:'Promo Δ',   sub:'vs baseline'},
+    {key:'newsPos',label:'News+%',    sub:'% ข่าวบวก'},
+    {key:'verif',  label:'Verified',  sub:'%'},
+    {key:'cov',    label:'Coverage',  sub:'หมวด/4'},
+    {key:'sector', label:'Sector',    sub:'กลุ่ม'},
+    {key:'peerZ',  label:'vs Peers σ',sub:'z-score'},
+  ];
+
+  function getRow(stock){
+    const sd=data?.stocks?.[stock]||{};
+    // sentiment with time decay
+    let ws=0,wt=0;
+    (sd.sentiments||[]).forEach(e=>{
+      const c=CRED[e.source]||2;
+      const w=c*Math.max(1,e.feedbackCount||1)*decay(e.date);
+      const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0;
+      ws+=v*w; wt+=w;
+    });
+    const sent=wt?Math.round(ws/wt*100):null;
+    const traf=calcTrafficLevel(sd.traffic);
+
+    // promo ratio
+    const monday=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
+    const byWeek={};
+    (sd.prices||[]).forEach(e=>{
+      if(!e.promoScore) return;
+      const w=monday(e.date);
+      if(!byWeek[w]) byWeek[w]={sum:0,n:0};
+      byWeek[w].sum+=e.promoScore; byWeek[w].n++;
+    });
+    const weeks=Object.keys(byWeek).sort();
+    let promoRatio=null,promoAlert=false;
+    if(weeks.length>=2){
+      const cur=byWeek[weeks[weeks.length-1]].sum/byWeek[weeks[weeks.length-1]].n;
+      const base=weeks.slice(0,-1).reduce((s,w)=>s+byWeek[w].sum/byWeek[w].n,0)/(weeks.length-1);
+      promoRatio=base?cur/base:null;
+      promoAlert=promoRatio!==null&&promoRatio>=1.25;
+    }
+
+    const news=sd.news||[];
+    const newsPos=news.length?Math.round(news.filter(n=>n.sentiment==='positive').length/news.length*100):null;
+    const all=[...(sd.prices||[]),...(sd.sentiments||[]),...(sd.traffic||[]),...(sd.news||[])];
+    const verif=all.length?Math.round(all.filter(e=>e.verified).length/all.length*100):null;
+    const cats=[(sd.prices||[]).length,(sd.sentiments||[]).length,(sd.traffic||[]).length,(sd.news||[]).length].filter(Boolean).length;
+    const cov=Math.round(cats/4*100);
+
+    const promoNorm=promoRatio!==null?Math.max(0,Math.round(100-(promoRatio-1)*200)):null;
+    const sectorKey=STOCK_SECTOR[stock];
+    const sector=SECTORS[sectorKey];
+    const sectorStocks=sectorKey==='IT_RETAIL'?SECTORS.IT_RETAIL.stocks:null;
+    const peerZ=sectorStocks&&sectorStocks.length>=2?calcPeerZ(data,stock,sectorStocks):null;
+
+    return {
+      sent:    {val:sent,    norm:sent!==null?(sent+100)/2:null,      fmt:sent!==null?(sent>0?`+${sent}`:`${sent}`):'—'},
+      traf:    {val:traf,    norm:traf,                               fmt:traf!==null?`${traf}/100`:'—'},
+      promo:   {val:promoRatio, norm:promoNorm,                       fmt:promoRatio!==null?`${Math.round((promoRatio-1)*100)>0?'+':''}${Math.round((promoRatio-1)*100)}%`:'—',alert:promoAlert},
+      newsPos: {val:newsPos, norm:newsPos,                            fmt:newsPos!==null?`${newsPos}%`:'—'},
+      verif:   {val:verif,   norm:verif,                              fmt:verif!==null?`${verif}%`:'—'},
+      cov:     {val:cov,     norm:cov,                                fmt:`${cats}/4`},
+      sector:  {val:sectorKey, norm:null,                             fmt:sectorKey==='IT_RETAIL'?'IT Retail':'Diversified',tag:sectorKey},
+      peerZ:   {val:peerZ,   norm:null,                              fmt:peerZ!==null?(peerZ>0?`+${peerZ}σ`:`${peerZ}σ`):'—'},
+    };
+  }
+
+  const rows=STOCKS.map(s=>({stock:s,m:getRow(s)}));
+  const thSt={padding:'8px 10px',fontSize:11,fontWeight:700,color:'#64748b',textAlign:'center',background:'#0f172a',textTransform:'uppercase',letterSpacing:.5};
+
+  return(
+    <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'18px 20px',marginBottom:16,overflowX:'auto'}}>
+      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:14}}>🌡️ Sector Heatmap</div>
+      <table style={{width:'100%',borderCollapse:'separate',borderSpacing:3}}>
+        <thead>
+          <tr>
+            <th style={{...thSt,textAlign:'left',minWidth:80}}>Stock</th>
+            {COLS.map(c=>(
+              <th key={c.key} style={{...thSt,minWidth:c.key==='sector'?90:80}}>
+                <div>{c.label}</div>
+                <div style={{fontSize:9,color:'#475569',fontWeight:400,marginTop:1}}>{c.sub}</div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({stock,m})=>{
+            const color=STOCK_COLOR[stock];
+            return(
+              <tr key={stock}>
+                <td style={{padding:'8px 10px'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:7}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:color,boxShadow:`0 0 6px ${color}`}}/>
+                    <span style={{fontWeight:700,color:'#f1f5f9',fontSize:13}}>{stock}</span>
+                  </div>
+                </td>
+                {COLS.map(c=>{
+                  const cell=m[c.key];
+                  if(c.key==='sector'){
+                    const isIT=cell.tag==='IT_RETAIL';
+                    return(
+                      <td key={c.key} style={{background:'#0f172a',borderRadius:6,padding:'8px 6px',textAlign:'center',border:'2px solid #0f172a'}}>
+                        <span style={{fontSize:11,fontWeight:700,padding:'2px 6px',borderRadius:4,
+                          background:isIT?'#1e1b4b':'#1c0800',
+                          color:isIT?'#818cf8':'#fb923c'}}>
+                          {cell.fmt}
+                        </span>
+                      </td>
+                    );
+                  }
+                  if(c.key==='peerZ'){
+                    const z=cell.val;
+                    const zColor=z===null?'#475569':z>=1?'#22c55e':z<=-1?'#ef4444':'#94a3b8';
+                    return(
+                      <td key={c.key} style={{background:'#0f172a',borderRadius:6,padding:'8px 6px',textAlign:'center',border:'2px solid #0f172a'}}>
+                        <span style={{fontFamily:'DM Mono',fontSize:13,fontWeight:700,color:zColor}}>{cell.fmt}</span>
+                      </td>
+                    );
+                  }
+                  const bg=heatBg(cell.norm);
+                  const tc=heatText(cell.norm);
+                  return(
+                    <td key={c.key} style={{background:bg,borderRadius:6,padding:'8px 6px',textAlign:'center',border:'2px solid #0f172a'}}>
+                      <div style={{fontFamily:'DM Mono',fontSize:13,fontWeight:700,color:tc}}>{cell.fmt}</div>
+                      {cell.alert&&<div style={{fontSize:9,color:'#fbbf24',marginTop:1}}>⚠️ spike</div>}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div style={{display:'flex',gap:16,marginTop:10,fontSize:10,color:'#64748b',flexWrap:'wrap'}}>
+        <span style={{color:'#86efac'}}>■ ≥60 ดี</span>
+        <span style={{color:'#fde68a'}}>■ 35–59 กลางๆ</span>
+        <span style={{color:'#fca5a5'}}>■ &lt;35 ต้องปรับ</span>
+        <span style={{color:'#475569'}}>■ — ไม่มีข้อมูล</span>
+        <span style={{color:'#818cf8'}}>■ IT Retail</span>
+        <span style={{color:'#fb923c'}}>■ Diversified</span>
+        <span style={{color:'#94a3b8'}}>σ = z-score vs sector peers (IT Retail เท่านั้น)</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── comparison bars ──────────────────────────────────────────────────────────
 function CompBars({data}){
-  const sentVals=STOCKS.map(s=>{const v=calcSentiment(getSD(data,s).sentiments)??0; return {stock:s,val:v+100,max:200,fmt:v>0?`+${v}`:`${v}`};});
-  const trafVals=STOCKS.map(s=>{const v=calcTraffic(getSD(data,s).traffic); return {stock:s,val:v??0,max:100,fmt:v!==null?`${v}/100`:'—'};});
+  const compositeVals=STOCKS.map(s=>{
+    const v=calcSignal(data,s).composite??0;
+    return {stock:s,val:v+100,max:200,fmt:v>0?`+${v}`:`${v}`};
+  });
+  const trafVals=STOCKS.map(s=>{const v=calcTrafficLevel(getSD(data,s).traffic); return {stock:s,val:v??0,max:100,fmt:v!==null?`${v}/100`:'—'};});
   const Row=({stock,val,max,fmt})=>(
     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
       <div style={{width:52,fontSize:11,color:'#94a3b8',textAlign:'right'}}>{stock}</div>
@@ -408,11 +583,14 @@ function CompBars({data}){
   );
   return(
     <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'18px 20px',marginBottom:16}}>
-      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:14}}>เปรียบเทียบ 3 หุ้น</div>
+      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:4}}>เปรียบเทียบ 3 หุ้น</div>
+      <div style={{fontSize:11,color:'#64748b',marginBottom:14}}>
+        ⚠️ ADVICE/COM7 = IT Retail peers (เปรียบเทียบตรงได้) · JMART = Diversified (ระวังเปรียบเทียบตรง)
+      </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}}>
         <div>
-          <div style={{fontSize:11,color:'#64748b',marginBottom:8,fontWeight:600}}>Sentiment (−100 → +100)</div>
-          {sentVals.map(v=><Row key={v.stock} {...v}/>)}
+          <div style={{fontSize:11,color:'#64748b',marginBottom:8,fontWeight:600}}>Composite Signal (−100 → +100)</div>
+          {compositeVals.map(v=><Row key={v.stock} {...v}/>)}
         </div>
         <div>
           <div style={{fontSize:11,color:'#64748b',marginBottom:8,fontWeight:600}}>Traffic Composite (0 → 100)</div>
@@ -466,18 +644,19 @@ function App(){
       </div>
 
       {/* alerts */}
-      <div style={{marginBottom:14}}>
+      <div style={{marginBottom:16}}>
         <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:8,textTransform:'uppercase',letterSpacing:1}}>⚡ Active Alerts</div>
         <AlertsPanel data={data}/>
       </div>
 
-      {/* 3 stock cards */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:14,marginBottom:16}}>
-        {STOCKS.map(s=><StockCard key={s} stock={s} sd={getSD(data,s)}/>)}
-      </div>
+      {/* IT Retail sector block */}
+      <SectorBlock sectorKey="IT_RETAIL" data={data}/>
+
+      {/* Diversified sector block */}
+      <SectorBlock sectorKey="DIVERSIFIED" data={data}/>
 
       {/* sector heatmap */}
-      <SectorHeatmap data={data}/>
+      <HeatmapWithSector data={data}/>
 
       {/* comparison bars */}
       <CompBars data={data}/>
@@ -487,12 +666,14 @@ function App(){
         <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:12}}>📋 Daily Monitoring Checklist</div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:8}}>
           {[
-            {icon:'🔥',task:'Promo Δ ใน Heatmap เป็นสีแดงไหม? (>+25%)',freq:'ทุกวัน'},
-            {icon:'📉',task:'Sentiment <−30? → เปิด Social ดูต้นเหตุ',freq:'ทุกวัน'},
-            {icon:'👥',task:'อัพเดต Traffic Source ≥ 1 แหล่ง',freq:'ทุกสัปดาห์'},
+            {icon:'🔥',task:'Promo Δ ใน Heatmap เป็นสีแดงไหม? (>+25%) — margin pressure สำหรับ IT retail',freq:'ทุกวัน'},
+            {icon:'📉',task:'Composite Signal <−30? → เปิด Social ดูต้นเหตุ',freq:'ทุกวัน'},
+            {icon:'🎯',task:'ADVICE vs COM7 z-score ห่างกัน >1.5σ? — peer divergence signal',freq:'ทุกวัน'},
+            {icon:'👥',task:'อัพเดต Traffic Source ≥ 1 แหล่ง/stock',freq:'ทุกสัปดาห์'},
             {icon:'💰',task:'บันทึกราคา iPhone/Samsung ทุกร้าน',freq:'ทุกสัปดาห์'},
             {icon:'📰',task:'เพิ่ม News ≥ 1 ชิ้น/stock + verify',freq:'ทุกสัปดาห์'},
             {icon:'✅',task:'กด Verify → เพิ่ม Verified% ใน Heatmap',freq:'ทุกครั้ง'},
+            {icon:'⚠️',task:'JMART: ตรวจ JMT NPL + Singer Finance แยกจาก IT retail signal',freq:'ทุกเดือน'},
           ].map((item,i)=>(
             <div key={i} style={{background:'#0f172a',borderRadius:8,padding:'10px 12px',display:'flex',gap:10,alignItems:'flex-start'}}>
               <span style={{fontSize:18}}>{item.icon}</span>
@@ -507,6 +688,7 @@ function App(){
 
       <div style={{textAlign:'center',color:'#334155',fontSize:11,marginTop:20}}>
         REDCODE Monitor · rc_social_v1 localStorage · ข้อมูลจาก social.html สะท้อนที่นี่ทันที
+        · ADVICE/COM7 = IT Retail peers · JMART = Diversified (IT 40% / JMT 35% / Singer 25%)
       </div>
     </div>
   );
