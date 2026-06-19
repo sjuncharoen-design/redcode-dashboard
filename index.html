@@ -354,7 +354,7 @@ function SetupWizard() {
 // ═══════════════════════════════════════════════════
 //  SJ COMPANY — Unified Finance (funds / income / expense / cards)
 // ═══════════════════════════════════════════════════
-const SJ_LS = "sj_finance_v2";
+const SJ_LS = "sj_finance_v3";
 const sjLoad = () => { try { const r=localStorage.getItem(SJ_LS); return r?JSON.parse(r):null; } catch { return null; } };
 const sjSave = d => { try { localStorage.setItem(SJ_LS, JSON.stringify(d)); } catch {} };
 
@@ -388,9 +388,10 @@ const SJ_FUNDBUYS_SEED = [
 const SJ_YEARS = ["2569","2568"];
 const EXP_GROUPS = ["ค่าใช้จ่ายคงที่รายเดือน","บัตรเครดิต","ค่าใช้จ่ายไม่ประจำ"];
 const EXP_GROUP_COLOR = { "ค่าใช้จ่ายคงที่รายเดือน":"#6366f1","บัตรเครดิต":"#ec4899","ค่าใช้จ่ายไม่ประจำ":"#f59e0b" };
+// หมายเหตุ: เงินเดือนปี 2568 ผูกอัตโนมัติจากแท็บภาษี (tax.grossIncome) ไม่ต้อง seed ซ้ำ
+// รายการในนี้ = รายได้อื่นๆ (ปันผล/โบนัส) หรือปีที่ไม่มีข้อมูลภาษี
 const SJ_INCOME_SEED = [
-  { id:"i68", year:"2568", name:"รายได้รวม (เงินเดือน+โบนัส+ปันผล)", amount:2057772 },
-  { id:"i69", year:"2569", name:"รายได้รวม (สะสมถึงปัจจุบัน)",       amount:1055249 },
+  { id:"i69", year:"2569", name:"รายได้รวม (สะสมถึงปัจจุบัน)", amount:1055249 },
 ];
 const SJ_EXPENSE_SEED = [
   // ── 2568 — ค่าใช้จ่ายคงที่รายเดือน (รวม 1,395,190) ──
@@ -407,6 +408,7 @@ const SJ_EXPENSE_SEED = [
   { id:"e68j", year:"2568", group:"บัตรเครดิต", name:"Max SCB Card (8)",    amount:73801 },
   { id:"e68k", year:"2568", group:"บัตรเครดิต", name:"Kbank Line Point (10)",amount:14328 },
   { id:"e68l", year:"2568", group:"บัตรเครดิต", name:"SJ SCB Card (8)",     amount:9913 },
+  { id:"e68p", year:"2568", group:"บัตรเครดิต", name:"UOB Premier 0863 (16)",amount:260651 },
   // ── 2568 — ค่าใช้จ่ายไม่ประจำ (รวม 107,835) ──
   { id:"e68m", year:"2568", group:"ค่าใช้จ่ายไม่ประจำ", name:"ประกันชีวิต+สุขภาพ", amount:77061 },
   { id:"e68n", year:"2568", group:"ค่าใช้จ่ายไม่ประจำ", name:"อื่นๆ (OTHER)",     amount:27874 },
@@ -611,7 +613,7 @@ function FundsView({ funds, setFunds, fundBuys, setFundBuys }) {
 }
 
 // ═══════════════ CASHFLOW (รายรับ-รายจ่าย) ═══════════════
-function CashflowView({ income, setIncome, expenses, setExpenses, invest, setInvest, year, setYear }) {
+function CashflowView({ income, setIncome, expenses, setExpenses, invest, setInvest, year, setYear, tax, setTax }) {
   const [incAdd,setIncAdd]=useState(false);
   const [expForm,setExpForm]=useState({name:"",amount:"",group:EXP_GROUPS[0]});
   const [expAdd,setExpAdd]=useState(false);
@@ -620,10 +622,15 @@ function CashflowView({ income, setIncome, expenses, setExpenses, invest, setInv
 
   const inY = arr => arr.filter(x=>x.year===year);
   const incY=inY(income), expY=inY(expenses), vY=inY(invest);
-  const incTotal=incY.reduce((a,i)=>a+(+i.amount||0),0);
+  // 🔗 ผูกกับแท็บภาษี: เงินเดือนก่อนภาษีของปีภาษีนี้ = tax.grossIncome
+  const linked = tax && tax.year===year;
+  const grossSalary = linked ? (+tax.grossIncome||0) : 0;
+  const taxDueY = linked ? calcThaiTax(Math.max(0,((+tax.grossIncome||0)-(+tax.exempt||0))-Math.min(((+tax.grossIncome||0)-(+tax.exempt||0))*0.5,100000)-tax.deductions.reduce((a,d)=>a+(+d.amount||0),0))) : 0;
+  const otherIncome=incY.reduce((a,i)=>a+(+i.amount||0),0);
+  const incTotal=grossSalary+otherIncome;          // รายรับก่อนภาษี
   const expTotal=expY.reduce((a,e)=>a+(+e.amount||0),0);
   const vTotal=vY.reduce((a,v)=>a+(+v.amount||0),0);
-  const balance=incTotal-expTotal;
+  const balance=incTotal-taxDueY-expTotal;         // คงเหลือหลังภาษี
   const savingRate=incTotal>0?(balance+vTotal)/incTotal*100:0;
 
   const addInc=()=>{ setIncome(p=>[...p,{id:"i"+Date.now(),year,name:"รายรับใหม่",amount:0}]); setIncAdd(false); };
@@ -648,10 +655,11 @@ function CashflowView({ income, setIncome, expenses, setExpenses, invest, setInv
         ))}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:16}}>
-        <StatCard lbl="รายรับทั้งปี" val={fmtK(incTotal)} sub={`≈ ${fmtK(incTotal/12)}/เดือน`} acc={SC.up} clr={SC.up} icon="💰"/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:16}}>
+        <StatCard lbl="รายรับก่อนภาษี" val={fmtK(incTotal)} sub={`≈ ${fmtK(incTotal/12)}/เดือน`} acc={SC.up} clr={SC.up} icon="💰"/>
+        <StatCard lbl="ภาษีทั้งปี 🔗" val={fmtK(taxDueY)} sub={linked?"ผูกกับแท็บภาษี":"ไม่มีข้อมูลภาษีปีนี้"} acc="#f59e0b" clr="#b45309" icon="🇹🇭"/>
         <StatCard lbl="รายจ่ายทั้งปี" val={fmtK(expTotal)} sub={`≈ ${fmtK(expTotal/12)}/เดือน`} acc={SC.dn} clr={SC.dn} icon="💸"/>
-        <StatCard lbl="คงเหลือ (Balance)" val={`${balance>=0?"+":""}${fmtK(Math.abs(balance))}`} sub={`รายรับ − รายจ่าย`} acc={balance>=0?SC.up:SC.dn} clr={balance>=0?SC.up:SC.dn} icon={balance>=0?"🟢":"🔴"}/>
+        <StatCard lbl="คงเหลือหลังภาษี" val={`${balance>=0?"+":""}${fmtK(Math.abs(balance))}`} sub={`รายรับ − ภาษี − รายจ่าย`} acc={balance>=0?SC.up:SC.dn} clr={balance>=0?SC.up:SC.dn} icon={balance>=0?"🟢":"🔴"}/>
         <StatCard lbl="เงินลงทุน/ออม" val={fmtK(vTotal)} sub={`อัตราออม+ลงทุน ${fmt(savingRate,1)}%`} acc="#6366f1" icon="🌱"/>
       </div>
 
@@ -662,6 +670,13 @@ function CashflowView({ income, setIncome, expenses, setExpenses, invest, setInv
             <SectionTitle icon="💰" title="รายรับ" sub={`ปี ${year}`}/>
             <button onClick={addInc} style={sjBtn("#16a34a")}>+ เพิ่ม</button>
           </div>
+          {linked&&(
+            <div className="rh" style={{display:"grid",gridTemplateColumns:"1fr 140px auto",gap:8,alignItems:"center",padding:"6px 4px",fontSize:13,background:"#eef2ff",borderRadius:8}}>
+              <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>🔗 เงินเดือนก่อนภาษี <span style={{fontSize:10,color:"#6366f1",background:"#e0e7ff",borderRadius:4,padding:"1px 5px"}}>ผูกกับภาษี</span></span>
+              <input value={tax.grossIncome} onChange={e=>setTax(t=>({...t,grossIncome:+e.target.value||0}))} style={{...sjInp,textAlign:"right",fontWeight:700}}/>
+              <span style={{width:30}}/>
+            </div>
+          )}
           {incY.map(i=>(
             <div key={i.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 140px auto",gap:8,alignItems:"center",padding:"6px 4px",fontSize:13}}>
               <input value={i.name} onChange={e=>editInc(i.id,"name",e.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
@@ -669,8 +684,14 @@ function CashflowView({ income, setIncome, expenses, setExpenses, invest, setInv
               <button onClick={()=>delInc(i.id)} style={sjDel}>ลบ</button>
             </div>
           ))}
-          <div style={{display:"flex",justifyContent:"space-between",borderTop:`2px solid ${SC.up}`,marginTop:8,paddingTop:8,fontWeight:800}}>
-            <span>รวมรายรับ</span><span style={{fontFamily:"'DM Mono',monospace",color:SC.up}}>{fmt(incTotal)} ฿</span>
+          <div style={{display:"flex",justifyContent:"space-between",borderTop:`1px solid ${SC.border}`,marginTop:8,paddingTop:8,fontWeight:600,fontSize:13,color:SC.sub}}>
+            <span>รวมรายรับ (ก่อนภาษี)</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmt(incTotal)} ฿</span>
+          </div>
+          {linked&&<div style={{display:"flex",justifyContent:"space-between",paddingTop:4,fontSize:13,color:"#b45309"}}>
+            <span>หัก ภาษีเงินได้ทั้งปี 🔗</span><span style={{fontFamily:"'DM Mono',monospace"}}>−{fmt(taxDueY)} ฿</span>
+          </div>}
+          <div style={{display:"flex",justifyContent:"space-between",borderTop:`2px solid ${SC.up}`,marginTop:6,paddingTop:8,fontWeight:800}}>
+            <span>รายรับสุทธิหลังภาษี</span><span style={{fontFamily:"'DM Mono',monospace",color:SC.up}}>{fmt(incTotal-taxDueY)} ฿</span>
           </div>
         </div>
 
@@ -1008,11 +1029,6 @@ function App() {
   // ── SJ unified aggregates ──
   const fundsValue=funds.reduce((a,f)=>a+(+f.value||0),0), fundsCost=funds.reduce((a,f)=>a+(+f.cost||0),0), fundsPnL=fundsValue-fundsCost;
   const cardsBalance=cards.reduce((a,c)=>a+(+c.balance||0),0);
-  // ใช้ปีล่าสุดที่มีข้อมูลครบ (2568) เป็นฐานสรุปต่อเดือนในภาพรวม
-  const ovYear="2568";
-  const incYearTotal=income.filter(i=>i.year===ovYear).reduce((a,i)=>a+(+i.amount||0),0);
-  const expYearTotal=expenses.filter(e=>e.year===ovYear).reduce((a,e)=>a+(+e.amount||0),0);
-  const incMonthly=incYearTotal/12, expMonthly=expYearTotal/12, netMonthly=incMonthly-expMonthly;
   // ภาษีทั้งปี (คำนวณสด)
   const taxAfterExempt=(+tax.grossIncome||0)-(+tax.exempt||0);
   const taxExpenseDed=Math.min(taxAfterExempt*0.5,100000);
@@ -1020,6 +1036,12 @@ function App() {
   const taxNet=Math.max(0,taxAfterExempt-taxExpenseDed-taxDeductTotal);
   const taxDue=calcThaiTax(taxNet);
   const taxPayMore=taxDue-(+tax.wht||0);
+  // ใช้ปีภาษีของ tax เป็นฐานสรุปต่อเดือนในภาพรวม (รายรับผูกกับภาษี)
+  const ovYear=tax.year;
+  const incYearTotal=(+tax.grossIncome||0)+income.filter(i=>i.year===ovYear).reduce((a,i)=>a+(+i.amount||0),0);
+  const expYearTotal=expenses.filter(e=>e.year===ovYear).reduce((a,e)=>a+(+e.amount||0),0);
+  const incMonthly=incYearTotal/12, expMonthly=expYearTotal/12;
+  const netMonthly=(incYearTotal-taxDue-expYearTotal)/12; // คงเหลือหลังภาษี/เดือน
   // Net worth = หุ้น(MV) + เงินสด + กองทุน − หนี้บัตรเครดิต
   const netWorth=stocksMV+totalCash+fundsValue-cardsBalance;
   // pnlPct: คิดจาก stock_cost+cash (total capital deployed)
@@ -1338,7 +1360,7 @@ function App() {
         {tab==="funds"&&<FundsView funds={funds} setFunds={setFunds} fundBuys={fundBuys} setFundBuys={setFundBuys}/>}
 
         {/* ══ CASHFLOW ══ */}
-        {tab==="cashflow"&&<CashflowView income={income} setIncome={setIncome} expenses={expenses} setExpenses={setExpenses} invest={invest} setInvest={setInvest} year={cfYear} setYear={setCfYear}/>}
+        {tab==="cashflow"&&<CashflowView income={income} setIncome={setIncome} expenses={expenses} setExpenses={setExpenses} invest={invest} setInvest={setInvest} year={cfYear} setYear={setCfYear} tax={tax} setTax={setTax}/>}
 
         {/* ══ TAX ══ */}
         {tab==="tax"&&<TaxView tax={tax} setTax={setTax}/>}
