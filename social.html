@@ -1393,6 +1393,7 @@ const App = () => {
           </div>
           <div style={{width:1,height:22,background:C.border}}/>
           <a href="index.html" style={{fontSize:12,color:C.indigo,textDecoration:'none',fontWeight:600}}>← Portfolio</a>
+          <a href="monitor.html" style={{fontSize:12,color:'#10b981',textDecoration:'none',fontWeight:600,background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:6,padding:'3px 10px'}}>📊 Monitor</a>
           <div style={{display:'flex',gap:5}}>
             {data.config.trackedStocks.map(s=>(
               <button key={s} onClick={()=>setStock(s)}
