@@ -354,7 +354,7 @@ function SetupWizard() {
 // ═══════════════════════════════════════════════════
 //  SJ COMPANY — Unified Finance (funds / income / expense / cards)
 // ═══════════════════════════════════════════════════
-const SJ_LS = "sj_finance_v1";
+const SJ_LS = "sj_finance_v2";
 const sjLoad = () => { try { const r=localStorage.getItem(SJ_LS); return r?JSON.parse(r):null; } catch { return null; } };
 const sjSave = d => { try { localStorage.setItem(SJ_LS, JSON.stringify(d)); } catch {} };
 
@@ -383,23 +383,85 @@ const SJ_FUNDBUYS_SEED = [
   { id:"b4", year:"2568", cat:"ThaiESG", fund:"KFGBTHAIESG-A", amount:29000 },
   { id:"b5", year:"2568", cat:"RMF",     fund:"KFGGRMF",       amount:12000 },
 ];
-// รายรับ / รายจ่าย / บัตรเครดิต (seed ตัวอย่าง — แก้ไขได้)
+// ── รายรับ-รายจ่าย แบบรายปี + จัดกลุ่ม (seed จากไฟล์ ExpSJ.xlsx) ──
+// amount = ยอด "ทั้งปี" (บาท)
+const SJ_YEARS = ["2569","2568"];
+const EXP_GROUPS = ["ค่าใช้จ่ายคงที่รายเดือน","บัตรเครดิต","ค่าใช้จ่ายไม่ประจำ"];
+const EXP_GROUP_COLOR = { "ค่าใช้จ่ายคงที่รายเดือน":"#6366f1","บัตรเครดิต":"#ec4899","ค่าใช้จ่ายไม่ประจำ":"#f59e0b" };
 const SJ_INCOME_SEED = [
-  { id:"i1", type:"salary",   name:"เงินเดือน",          amount:0, freq:"monthly", note:"" },
-  { id:"i2", type:"dividend", name:"เงินปันผลหุ้น/กองทุน", amount:0, freq:"yearly",  note:"" },
+  { id:"i68", year:"2568", name:"รายได้รวม (เงินเดือน+โบนัส+ปันผล)", amount:2057772 },
+  { id:"i69", year:"2569", name:"รายได้รวม (สะสมถึงปัจจุบัน)",       amount:1055249 },
 ];
 const SJ_EXPENSE_SEED = [
-  { id:"e1", name:"ค่าผ่อนบ้าน/ค่าเช่า", amount:0, cat:"ที่อยู่อาศัย", freq:"monthly" },
-  { id:"e2", name:"ค่าน้ำ/ไฟ/เน็ต",     amount:0, cat:"สาธารณูปโภค", freq:"monthly" },
-  { id:"e3", name:"ค่ากิน/ใช้จ่ายทั่วไป", amount:0, cat:"ทั่วไป",      freq:"monthly" },
+  // ── 2568 — ค่าใช้จ่ายคงที่รายเดือน (รวม 1,395,190) ──
+  { id:"e68a", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ผ่อนบ้าน ANYA (UOB)",        amount:860000 },
+  { id:"e68b", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ผ่อนบ้าน ANYA (TMT)",        amount:180000 },
+  { id:"e68c", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"เช่า Everest",               amount:105840 },
+  { id:"e68d", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ผ่อนรถ Toyota Cross",        amount:76000 },
+  { id:"e68e", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ปรับปรุงบ้าน (Note&Vis)",     amount:7900 },
+  { id:"e68f", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ค่าไฟ (MEA) Anya",           amount:38343 },
+  { id:"e68g", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"เน็ต AIS Anya",              amount:5124 },
+  { id:"e68h", year:"2568", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ค่าน้ำประปา Anya",            amount:1983 },
+  // ── 2568 — บัตรเครดิต (รวม 320,910) ──
+  { id:"e68i", year:"2568", group:"บัตรเครดิต", name:"BAY Card (9)",        amount:222868 },
+  { id:"e68j", year:"2568", group:"บัตรเครดิต", name:"Max SCB Card (8)",    amount:73801 },
+  { id:"e68k", year:"2568", group:"บัตรเครดิต", name:"Kbank Line Point (10)",amount:14328 },
+  { id:"e68l", year:"2568", group:"บัตรเครดิต", name:"SJ SCB Card (8)",     amount:9913 },
+  // ── 2568 — ค่าใช้จ่ายไม่ประจำ (รวม 107,835) ──
+  { id:"e68m", year:"2568", group:"ค่าใช้จ่ายไม่ประจำ", name:"ประกันชีวิต+สุขภาพ", amount:77061 },
+  { id:"e68n", year:"2568", group:"ค่าใช้จ่ายไม่ประจำ", name:"อื่นๆ (OTHER)",     amount:27874 },
+  { id:"e68o", year:"2568", group:"ค่าใช้จ่ายไม่ประจำ", name:"คอร์สหุ้น",         amount:2900 },
+  // ── 2569 — บางส่วน ──
+  { id:"e69a", year:"2569", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ผ่อนบ้าน ANYA (UOB)", amount:540000 },
+  { id:"e69b", year:"2569", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"ผ่อนบ้าน ANYA (TMT)", amount:180000 },
+  { id:"e69c", year:"2569", group:"ค่าใช้จ่ายคงที่รายเดือน", name:"เช่า Everest",        amount:44100 },
+  { id:"e69d", year:"2569", group:"บัตรเครดิต", name:"Max SCB Card (8)",     amount:64156 },
+  { id:"e69e", year:"2569", group:"บัตรเครดิต", name:"BAY Card (9)",         amount:51294 },
+  { id:"e69f", year:"2569", group:"บัตรเครดิต", name:"Kbank Line Point (10)", amount:58487 },
+  { id:"e69g", year:"2569", group:"ค่าใช้จ่ายไม่ประจำ", name:"ประกันชีวิต+สุขภาพ", amount:77061 },
+  { id:"e69h", year:"2569", group:"ค่าใช้จ่ายไม่ประจำ", name:"อื่นๆ (OTHER)",     amount:73370 },
+];
+// เงินลงทุน/ออม (แยกจากค่าใช้จ่าย) — รวม 600,000 ปี 2568
+const SJ_INVEST_SEED = [
+  { id:"v68a", year:"2568", name:"กองหน้า Striker (KS)",          amount:320000 },
+  { id:"v68b", year:"2568", name:"กองหลัง KFGBTHAIESG-A (ThaiESG)",amount:229000 },
+  { id:"v68c", year:"2568", name:"K-SF-A Preemptive Strike",      amount:39000 },
+  { id:"v68d", year:"2568", name:"กองหลัง KFUSINDFXRMF (RMF)",     amount:12000 },
+  { id:"v69a", year:"2569", name:"กองหลัง KFGBTHAIESG-A (ThaiESG)",amount:60000 },
+  { id:"v69b", year:"2569", name:"K-SF-A Preemptive Strike",      amount:39000 },
+  { id:"v69c", year:"2569", name:"กองหลัง KFUSINDFXRMF (RMF)",     amount:3000 },
 ];
 const SJ_CARDS_SEED = [
-  { id:"c1", name:"บัตรเครดิต 1", limit:0, balance:0, due:"", note:"" },
+  { id:"c1", name:"BAY Card", limit:0, balance:0, due:"", note:"" },
+  { id:"c2", name:"SCB Card", limit:0, balance:0, due:"", note:"" },
+  { id:"c3", name:"Kbank Line Point", limit:0, balance:0, due:"", note:"" },
+  { id:"c4", name:"UOB Premier", limit:0, balance:0, due:"", note:"" },
 ];
-const SJ_DEFAULT = { funds:SJ_FUNDS_SEED, fundBuys:SJ_FUNDBUYS_SEED, income:SJ_INCOME_SEED, expenses:SJ_EXPENSE_SEED, cards:SJ_CARDS_SEED };
+// ── ภาษีเงินได้บุคคลธรรมดา (seed จากแบบ ภ.ง.ด.91 ปีภาษี 2568) ──
+const SJ_TAX_SEED = {
+  year:"2568",
+  grossIncome:2693008.24,   // เงินเดือน ค่าจ้าง ฯลฯ (40(1))
+  exempt:75620.81,          // เงินได้ยกเว้น (PVD ส่วนเกิน ฯลฯ)
+  wht:310846.86,            // ภาษีหัก ณ ที่จ่าย
+  deductions:[              // ค่าลดหย่อน (รวม 453,330.04)
+    { id:"d1", name:"ผู้มีเงินได้",            amount:60000 },
+    { id:"d2", name:"คู่สมรส",                amount:60000 },
+    { id:"d3", name:"ประกันสังคม",            amount:9000 },
+    { id:"d4", name:"กองทุนสำรองเลี้ยงชีพ",    amount:10000 },
+    { id:"d5", name:"เบี้ยประกันชีวิต",        amount:29741 },
+    { id:"d6", name:"เบี้ยประกันสุขภาพ",       amount:25000 },
+    { id:"d7", name:"RMF",                   amount:12000 },
+    { id:"d8", name:"ThaiESG",               amount:229000 },
+    { id:"d9", name:"Easy E-Receipt",        amount:18589.04 },
+  ],
+};
+const SJ_DEFAULT = { funds:SJ_FUNDS_SEED, fundBuys:SJ_FUNDBUYS_SEED, income:SJ_INCOME_SEED, expenses:SJ_EXPENSE_SEED, invest:SJ_INVEST_SEED, cards:SJ_CARDS_SEED, tax:SJ_TAX_SEED };
 
-// แปลงทุกความถี่เป็นยอด "ต่อเดือน" สำหรับสรุป cashflow
-const toMonthly = (amount, freq) => { const a=+amount||0; if(freq==="yearly")return a/12; if(freq==="weekly")return a*52/12; if(freq==="daily")return a*30; return a; };
+// ── ภาษีเงินได้บุคคลธรรมดา (ขั้นบันได ปี 2567+) ──
+const TH_BRACKETS = [[150000,0],[300000,0.05],[500000,0.10],[750000,0.15],[1000000,0.20],[2000000,0.25],[5000000,0.30],[Infinity,0.35]];
+function calcThaiTax(net){ let tax=0,lower=0; for(const [upper,rate] of TH_BRACKETS){ if(net>lower){ tax+=(Math.min(net,upper)-lower)*rate; lower=upper; } else break; } return tax; }
+// อัตราภาษีของเงินได้สุทธิบาทถัดไป (marginal rate)
+function marginalRate(net){ let lower=0; for(const [upper,rate] of TH_BRACKETS){ if(net<=upper) return rate; lower=upper; } return 0.35; }
 
 // ── styling สำหรับโมดูล SJ (module scope) ──
 const SC = { bg:"#f8fafc", card:"#ffffff", border:"#e2e8f0", muted:"#94a3b8", text:"#1e293b", sub:"#64748b", up:"#16a34a", dn:"#dc2626" };
@@ -549,95 +611,255 @@ function FundsView({ funds, setFunds, fundBuys, setFundBuys }) {
 }
 
 // ═══════════════ CASHFLOW (รายรับ-รายจ่าย) ═══════════════
-function CashflowView({ income, setIncome, expenses, setExpenses }) {
-  const [incForm,setIncForm]=useState({type:"salary",name:"",amount:"",freq:"monthly",note:""});
-  const [expForm,setExpForm]=useState({name:"",amount:"",cat:"ทั่วไป",freq:"monthly"});
+function CashflowView({ income, setIncome, expenses, setExpenses, invest, setInvest, year, setYear }) {
   const [incAdd,setIncAdd]=useState(false);
+  const [expForm,setExpForm]=useState({name:"",amount:"",group:EXP_GROUPS[0]});
   const [expAdd,setExpAdd]=useState(false);
+  const [vForm,setVForm]=useState({name:"",amount:""});
+  const [vAdd,setVAdd]=useState(false);
 
-  const incMonthly=income.reduce((a,i)=>a+toMonthly(i.amount,i.freq),0);
-  const expMonthly=expenses.reduce((a,e)=>a+toMonthly(e.amount,e.freq),0);
-  const net=incMonthly-expMonthly;
+  const inY = arr => arr.filter(x=>x.year===year);
+  const incY=inY(income), expY=inY(expenses), vY=inY(invest);
+  const incTotal=incY.reduce((a,i)=>a+(+i.amount||0),0);
+  const expTotal=expY.reduce((a,e)=>a+(+e.amount||0),0);
+  const vTotal=vY.reduce((a,v)=>a+(+v.amount||0),0);
+  const balance=incTotal-expTotal;
+  const savingRate=incTotal>0?(balance+vTotal)/incTotal*100:0;
 
-  const addInc=()=>{ if(!incForm.name)return; setIncome(p=>[...p,{id:"i"+Date.now(),...incForm,amount:+incForm.amount||0}]); setIncForm({type:"salary",name:"",amount:"",freq:"monthly",note:""}); setIncAdd(false); };
-  const addExp=()=>{ if(!expForm.name)return; setExpenses(p=>[...p,{id:"e"+Date.now(),...expForm,amount:+expForm.amount||0}]); setExpForm({name:"",amount:"",cat:"ทั่วไป",freq:"monthly"}); setExpAdd(false); };
+  const addInc=()=>{ setIncome(p=>[...p,{id:"i"+Date.now(),year,name:"รายรับใหม่",amount:0}]); setIncAdd(false); };
   const editInc=(id,k,v)=>setIncome(p=>p.map(i=>i.id!==id?i:{...i,[k]:(k==="amount")?(+v||0):v}));
-  const editExp=(id,k,v)=>setExpenses(p=>p.map(e=>e.id!==id?e:{...e,[k]:(k==="amount")?(+v||0):v}));
   const delInc=id=>setIncome(p=>p.filter(i=>i.id!==id));
+  const addExp=()=>{ if(!expForm.name)return; setExpenses(p=>[...p,{id:"e"+Date.now(),year,...expForm,amount:+expForm.amount||0}]); setExpForm({name:"",amount:"",group:EXP_GROUPS[0]}); setExpAdd(false); };
+  const editExp=(id,k,v)=>setExpenses(p=>p.map(e=>e.id!==id?e:{...e,[k]:(k==="amount")?(+v||0):v}));
   const delExp=id=>setExpenses(p=>p.filter(e=>e.id!==id));
+  const addV=()=>{ if(!vForm.name)return; setInvest(p=>[...p,{id:"v"+Date.now(),year,...vForm,amount:+vForm.amount||0}]); setVForm({name:"",amount:""}); setVAdd(false); };
+  const editV=(id,k,v)=>setInvest(p=>p.map(x=>x.id!==id?x:{...x,[k]:(k==="amount")?(+v||0):v}));
+  const delV=id=>setInvest(p=>p.filter(x=>x.id!==id));
 
-  const freqLbl={monthly:"/เดือน",yearly:"/ปี",weekly:"/สัปดาห์",daily:"/วัน"};
-  const FreqSel=({v,on})=><select value={v} onChange={e=>on(e.target.value)} style={{...sjInp,padding:"6px 4px"}}><option value="monthly">รายเดือน</option><option value="yearly">รายปี</option><option value="weekly">รายสัปดาห์</option><option value="daily">รายวัน</option></select>;
+  const expByGroup=EXP_GROUPS.map(g=>({name:g,value:expY.filter(e=>e.group===g).reduce((a,e)=>a+(+e.amount||0),0)})).filter(d=>d.value>0);
+
+  return (
+    <>
+      {/* year selector */}
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14}}>
+        <span style={{fontSize:13,color:SC.sub,fontWeight:600}}>ปีภาษี:</span>
+        {SJ_YEARS.map(y=>(
+          <button key={y} onClick={()=>setYear(y)} style={{...sjBtn(year===y?"#6366f1":"#f1f5f9"),color:year===y?"#fff":SC.sub,fontWeight:700}}>{y} ({(+y)-543})</button>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:16}}>
+        <StatCard lbl="รายรับทั้งปี" val={fmtK(incTotal)} sub={`≈ ${fmtK(incTotal/12)}/เดือน`} acc={SC.up} clr={SC.up} icon="💰"/>
+        <StatCard lbl="รายจ่ายทั้งปี" val={fmtK(expTotal)} sub={`≈ ${fmtK(expTotal/12)}/เดือน`} acc={SC.dn} clr={SC.dn} icon="💸"/>
+        <StatCard lbl="คงเหลือ (Balance)" val={`${balance>=0?"+":""}${fmtK(Math.abs(balance))}`} sub={`รายรับ − รายจ่าย`} acc={balance>=0?SC.up:SC.dn} clr={balance>=0?SC.up:SC.dn} icon={balance>=0?"🟢":"🔴"}/>
+        <StatCard lbl="เงินลงทุน/ออม" val={fmtK(vTotal)} sub={`อัตราออม+ลงทุน ${fmt(savingRate,1)}%`} acc="#6366f1" icon="🌱"/>
+      </div>
+
+      <div className="sj-2col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        {/* รายรับ */}
+        <div style={{...sjCard}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <SectionTitle icon="💰" title="รายรับ" sub={`ปี ${year}`}/>
+            <button onClick={addInc} style={sjBtn("#16a34a")}>+ เพิ่ม</button>
+          </div>
+          {incY.map(i=>(
+            <div key={i.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 140px auto",gap:8,alignItems:"center",padding:"6px 4px",fontSize:13}}>
+              <input value={i.name} onChange={e=>editInc(i.id,"name",e.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
+              <input value={i.amount} onChange={e=>editInc(i.id,"amount",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
+              <button onClick={()=>delInc(i.id)} style={sjDel}>ลบ</button>
+            </div>
+          ))}
+          <div style={{display:"flex",justifyContent:"space-between",borderTop:`2px solid ${SC.up}`,marginTop:8,paddingTop:8,fontWeight:800}}>
+            <span>รวมรายรับ</span><span style={{fontFamily:"'DM Mono',monospace",color:SC.up}}>{fmt(incTotal)} ฿</span>
+          </div>
+        </div>
+
+        {/* donut รายจ่ายตามกลุ่ม */}
+        <div style={{...sjCard}}>
+          <SectionTitle icon="🍩" title="สัดส่วนรายจ่าย" sub={`รวม ${fmtK(expTotal)}`}/>
+          <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+            <PieChartSVG data={expByGroup} size={140} innerR={44} outerR={66}/>
+            <div style={{flex:1,minWidth:160}}>
+              {expByGroup.map((d,i)=>{ const p=expTotal>0?d.value/expTotal*100:0; return (
+                <div key={d.name} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",fontSize:13}}>
+                  <span style={{width:10,height:10,borderRadius:3,background:EXP_GROUP_COLOR[d.name]||COLORS[i],flexShrink:0}}/>
+                  <span style={{flex:1}}>{d.name}</span>
+                  <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmt(d.value,0)}</span>
+                  <span style={{width:48,textAlign:"right",color:SC.muted}}>{fmt(p,0)}%</span>
+                </div>
+              );})}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* รายจ่าย แยกกลุ่ม */}
+      <div style={{...sjCard,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <SectionTitle icon="💸" title="รายจ่าย แยกหมวด" sub={`ปี ${year}`}/>
+          <button onClick={()=>setExpAdd(v=>!v)} style={sjBtn(expAdd?"#94a3b8":"#dc2626")}>{expAdd?"ยกเลิก":"+ เพิ่มรายการ"}</button>
+        </div>
+        {expAdd&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 200px 130px auto",gap:6,marginBottom:10}}>
+            <input placeholder="ชื่อรายการ" value={expForm.name} onChange={e=>setExpForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
+            <select value={expForm.group} onChange={e=>setExpForm(f=>({...f,group:e.target.value}))} style={sjInp}>{EXP_GROUPS.map(g=><option key={g}>{g}</option>)}</select>
+            <input placeholder="ยอดทั้งปี" value={expForm.amount} onChange={e=>setExpForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
+            <button onClick={addExp} style={sjBtn("#dc2626")}>เพิ่ม</button>
+          </div>
+        )}
+        {EXP_GROUPS.filter(g=>expY.some(e=>e.group===g)).map(g=>{
+          const list=expY.filter(e=>e.group===g); const sum=list.reduce((a,e)=>a+(+e.amount||0),0);
+          return (
+            <div key={g} style={{marginBottom:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,borderBottom:`2px solid ${EXP_GROUP_COLOR[g]}`,paddingBottom:4,marginBottom:6}}>
+                <span style={{width:10,height:10,borderRadius:3,background:EXP_GROUP_COLOR[g]}}/>
+                <span style={{fontWeight:800,fontSize:14}}>{g}</span>
+                <span style={{marginLeft:"auto",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmt(sum)} ฿</span>
+                <span style={{fontSize:11,color:SC.muted}}>≈{fmt(sum/12,0)}/ด.</span>
+              </div>
+              {list.map(e=>(
+                <div key={e.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 140px 90px auto",gap:8,alignItems:"center",padding:"5px 4px",fontSize:13}}>
+                  <input value={e.name} onChange={ev=>editExp(e.id,"name",ev.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
+                  <input value={e.amount} onChange={ev=>editExp(e.id,"amount",ev.target.value)} style={{...sjInp,textAlign:"right"}}/>
+                  <span style={{textAlign:"right",fontSize:11,color:SC.muted,fontFamily:"'DM Mono',monospace"}}>{fmt((+e.amount||0)/12,0)}/ด.</span>
+                  <button onClick={()=>delExp(e.id)} style={sjDel}>ลบ</button>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+        <div style={{display:"flex",justifyContent:"space-between",borderTop:`2px solid ${SC.dn}`,marginTop:6,paddingTop:8,fontWeight:800}}>
+          <span>รวมรายจ่าย</span><span style={{fontFamily:"'DM Mono',monospace",color:SC.dn}}>{fmt(expTotal)} ฿</span>
+        </div>
+      </div>
+
+      {/* เงินลงทุน/ออม */}
+      <div style={{...sjCard}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <SectionTitle icon="🌱" title="เงินลงทุน / เงินออม" sub="แยกจากค่าใช้จ่าย"/>
+          <button onClick={()=>setVAdd(v=>!v)} style={sjBtn(vAdd?"#94a3b8":"#6366f1")}>{vAdd?"ยกเลิก":"+ เพิ่ม"}</button>
+        </div>
+        {vAdd&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 140px auto",gap:6,marginBottom:10}}>
+            <input placeholder="ชื่อรายการ" value={vForm.name} onChange={e=>setVForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
+            <input placeholder="ยอดทั้งปี" value={vForm.amount} onChange={e=>setVForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
+            <button onClick={addV} style={sjBtn("#6366f1")}>เพิ่ม</button>
+          </div>
+        )}
+        {vY.map(v=>(
+          <div key={v.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 140px auto",gap:8,alignItems:"center",padding:"5px 4px",fontSize:13}}>
+            <input value={v.name} onChange={e=>editV(v.id,"name",e.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
+            <input value={v.amount} onChange={e=>editV(v.id,"amount",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
+            <button onClick={()=>delV(v.id)} style={sjDel}>ลบ</button>
+          </div>
+        ))}
+        <div style={{display:"flex",justifyContent:"space-between",borderTop:`2px solid #6366f1`,marginTop:8,paddingTop:8,fontWeight:800}}>
+          <span>รวมเงินลงทุน/ออม</span><span style={{fontFamily:"'DM Mono',monospace",color:"#6366f1"}}>{fmt(vTotal)} ฿</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ═══════════════ TAX (ภาษีเงินได้บุคคลธรรมดา) ═══════════════
+function TaxView({ tax, setTax }) {
+  const [dAdd,setDAdd]=useState(false);
+  const [dForm,setDForm]=useState({name:"",amount:""});
+  const setF=(k,v)=>setTax(t=>({...t,[k]:(+v||0)}));
+  const editD=(id,k,v)=>setTax(t=>({...t,deductions:t.deductions.map(d=>d.id!==id?d:{...d,[k]:(k==="amount")?(+v||0):v})}));
+  const delD=id=>setTax(t=>({...t,deductions:t.deductions.filter(d=>d.id!==id)}));
+  const addD=()=>{ if(!dForm.name)return; setTax(t=>({...t,deductions:[...t.deductions,{id:"d"+Date.now(),name:dForm.name,amount:+dForm.amount||0}]})); setDForm({name:"",amount:""}); setDAdd(false); };
+
+  // ── คำนวณ ──
+  const gross=+tax.grossIncome||0, exempt=+tax.exempt||0, wht=+tax.wht||0;
+  const afterExempt=gross-exempt;
+  const expenseDeduct=Math.min(afterExempt*0.5,100000); // ค่าใช้จ่าย 50% สูงสุด 100,000
+  const afterExpense=afterExempt-expenseDeduct;
+  const deductTotal=tax.deductions.reduce((a,d)=>a+(+d.amount||0),0);
+  const net=Math.max(0,afterExpense-deductTotal);
+  const taxDue=calcThaiTax(net);
+  const payMore=taxDue-wht; // >0 จ่ายเพิ่ม, <0 ได้คืน
+  const mRate=marginalRate(net);
+  const effRate=gross>0?taxDue/gross*100:0;
+  const inst=payMore>=3000?[Math.ceil(payMore/3*100)/100,Math.floor(payMore/3*100)/100,Math.floor(payMore/3*100)/100]:null;
+  if(inst){ inst[0]=payMore-inst[1]-inst[2]; } // งวดแรกรับเศษ
+
+  const Row=({lbl,val,bold,clr,minus})=>(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${SC.border}`,fontSize:bold?15:13}}>
+      <span style={{color:bold?SC.text:SC.sub,fontWeight:bold?800:500}}>{lbl}</span>
+      <span style={{fontFamily:"'DM Mono',monospace",fontWeight:bold?800:600,color:clr||SC.text}}>{minus&&val>0?"−":""}{fmt(val)}</span>
+    </div>
+  );
 
   return (
     <>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:16}}>
-        <StatCard lbl="รายรับ/เดือน" val={fmtK(incMonthly)} sub="รวมทุกแหล่ง (แปลงเป็นต่อเดือน)" acc={SC.up} clr={SC.up} icon="💰"/>
-        <StatCard lbl="รายจ่าย/เดือน" val={fmtK(expMonthly)} sub="รวมทุกหมวด" acc={SC.dn} clr={SC.dn} icon="💸"/>
-        <StatCard lbl="คงเหลือ/เดือน" val={`${net>=0?"+":""}${fmtK(Math.abs(net))}`} sub={incMonthly>0?`เก็บได้ ${fmt(net/incMonthly*100,1)}% ของรายรับ`:"—"} acc={net>=0?SC.up:SC.dn} clr={net>=0?SC.up:SC.dn} icon={net>=0?"🟢":"🔴"}/>
-        <StatCard lbl="ประมาณการ/ปี" val={`${net>=0?"+":""}${fmtK(Math.abs(net*12))}`} sub="คงเหลือสุทธิทั้งปี" acc="#6366f1" clr={net>=0?SC.up:SC.dn} icon="📅"/>
+        <StatCard lbl="เงินได้สุทธิ" val={fmtK(net)} sub={`ฐานภาษีขั้น ${fmt(mRate*100,0)}%`} acc="#6366f1" icon="🧮"/>
+        <StatCard lbl="ภาษีที่ต้องเสียทั้งปี" val={fmtK(taxDue)} sub={`อัตราเฉลี่ย ${fmt(effRate,2)}% ของเงินได้`} acc="#f59e0b" clr="#b45309" icon="🇹🇭"/>
+        <StatCard lbl="หัก ณ ที่จ่ายแล้ว" val={fmtK(wht)} sub="ภาษีที่ถูกหักระหว่างปี" acc="#0ea5e9" icon="🧾"/>
+        <StatCard lbl={payMore>=0?"ต้องจ่ายเพิ่ม":"ได้คืนภาษี"} val={fmtK(Math.abs(payMore))} sub={payMore>=0?"ชำระตอนยื่นแบบ":"ขอคืนได้"} acc={payMore>=0?SC.dn:SC.up} clr={payMore>=0?SC.dn:SC.up} icon={payMore>=0?"💰":"🎉"}/>
       </div>
 
-      <div className="sj-2col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        {/* รายรับ */}
+      <div className="sj-2col" style={{display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:16}}>
+        {/* การคำนวณ */}
         <div style={{...sjCard}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <SectionTitle icon="💰" title="รายรับ" sub="เงินเดือน · ปันผล · อื่นๆ"/>
-            <button onClick={()=>setIncAdd(v=>!v)} style={sjBtn(incAdd?"#94a3b8":"#16a34a")}>{incAdd?"ยกเลิก":"+ เพิ่ม"}</button>
+          <SectionTitle icon="🧮" title={`การคำนวณภาษี — ปีภาษี ${tax.year}`} sub="ภ.ง.ด.91"/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 150px",gap:8,alignItems:"center",marginBottom:6}}>
+            <span style={{fontSize:13,color:SC.sub}}>เงินเดือน/ค่าจ้าง ทั้งปี (40(1))</span>
+            <input value={tax.grossIncome} onChange={e=>setF("grossIncome",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
+            <span style={{fontSize:13,color:SC.sub}}>หัก เงินได้ยกเว้น (PVD ส่วนเกิน ฯลฯ)</span>
+            <input value={tax.exempt} onChange={e=>setF("exempt",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
           </div>
-          {incAdd&&(
-            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6,marginBottom:10}}>
-              <div style={{display:"grid",gridTemplateColumns:"110px 1fr",gap:6}}>
-                <select value={incForm.type} onChange={e=>setIncForm(f=>({...f,type:e.target.value}))} style={sjInp}><option value="salary">เงินเดือน</option><option value="dividend">เงินปันผล</option><option value="bonus">โบนัส</option><option value="other">อื่นๆ</option></select>
-                <input placeholder="ชื่อรายการ" value={incForm.name} onChange={e=>setIncForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 130px auto",gap:6}}>
-                <input placeholder="จำนวนเงิน" value={incForm.amount} onChange={e=>setIncForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
-                <FreqSel v={incForm.freq} on={v=>setIncForm(f=>({...f,freq:v}))}/>
-                <button onClick={addInc} style={sjBtn("#16a34a")}>เพิ่ม</button>
-              </div>
+          <Row lbl="คงเหลือ" val={afterExempt} clr={SC.text}/>
+          <Row lbl="หัก ค่าใช้จ่าย (50% สูงสุด 100,000)" val={expenseDeduct} clr={SC.dn} minus/>
+          <Row lbl="คงเหลือหลังหักค่าใช้จ่าย" val={afterExpense}/>
+          <Row lbl={`หัก ค่าลดหย่อนรวม (${tax.deductions.length} รายการ)`} val={deductTotal} clr={SC.dn} minus/>
+          <Row lbl="เงินได้สุทธิ (ฐานภาษี)" val={net} bold/>
+          <Row lbl="ภาษีคำนวณจากเงินได้สุทธิ" val={taxDue} bold clr="#b45309"/>
+          <Row lbl="หัก ภาษีหัก ณ ที่จ่าย" val={wht} clr={SC.up} minus/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0 2px",fontSize:16}}>
+            <span style={{fontWeight:800}}>{payMore>=0?"ภาษีที่ต้องชำระเพิ่ม":"ภาษีที่ชำระไว้เกิน (ขอคืนได้)"}</span>
+            <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:payMore>=0?SC.dn:SC.up,fontSize:20}}>{fmt(Math.abs(payMore))} ฿</span>
+          </div>
+          {inst&&(
+            <div style={{marginTop:12,background:"#fef3c7",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#b45309",marginBottom:6}}>📅 ผ่อนชำระได้ 3 งวด (ภาษี ≥ 3,000 บาท)</div>
+              {inst.map((v,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"2px 0"}}>
+                  <span>งวดที่ {i+1}</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmt(v)} ฿</span>
+                </div>
+              ))}
             </div>
           )}
-          {income.map(i=>(
-            <div key={i.id} className="rh" style={{display:"grid",gridTemplateColumns:"22px 1fr 120px 110px auto",gap:6,alignItems:"center",padding:"5px 4px",fontSize:13}}>
-              <span style={{fontSize:15}}>{i.type==="salary"?"💵":i.type==="dividend"?"🪙":i.type==="bonus"?"🎁":"➕"}</span>
-              <input value={i.name} onChange={e=>editInc(i.id,"name",e.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
-              <input value={i.amount} onChange={e=>editInc(i.id,"amount",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
-              <FreqSel v={i.freq} on={v=>editInc(i.id,"freq",v)}/>
-              <button onClick={()=>delInc(i.id)} style={sjDel}>ลบ</button>
-            </div>
-          ))}
         </div>
 
-        {/* รายจ่าย */}
+        {/* ค่าลดหย่อน */}
         <div style={{...sjCard}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <SectionTitle icon="💸" title="รายจ่ายรายเดือน" sub="ค่าใช้จ่ายประจำ"/>
-            <button onClick={()=>setExpAdd(v=>!v)} style={sjBtn(expAdd?"#94a3b8":"#dc2626")}>{expAdd?"ยกเลิก":"+ เพิ่ม"}</button>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <SectionTitle icon="📋" title="ค่าลดหย่อน" sub={`รวม ${fmtK(deductTotal)}`}/>
+            <button onClick={()=>setDAdd(v=>!v)} style={sjBtn(dAdd?"#94a3b8":"#6366f1")}>{dAdd?"ยกเลิก":"+ เพิ่ม"}</button>
           </div>
-          {expAdd&&(
-            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6,marginBottom:10}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 130px",gap:6}}>
-                <input placeholder="ชื่อรายการ" value={expForm.name} onChange={e=>setExpForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
-                <input placeholder="หมวด" value={expForm.cat} onChange={e=>setExpForm(f=>({...f,cat:e.target.value}))} style={sjInp}/>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 130px auto",gap:6}}>
-                <input placeholder="จำนวนเงิน" value={expForm.amount} onChange={e=>setExpForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
-                <FreqSel v={expForm.freq} on={v=>setExpForm(f=>({...f,freq:v}))}/>
-                <button onClick={addExp} style={sjBtn("#dc2626")}>เพิ่ม</button>
-              </div>
+          {dAdd&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 130px auto",gap:6,marginBottom:10}}>
+              <input placeholder="ชื่อค่าลดหย่อน" value={dForm.name} onChange={e=>setDForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
+              <input placeholder="จำนวน" value={dForm.amount} onChange={e=>setDForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
+              <button onClick={addD} style={sjBtn("#6366f1")}>เพิ่ม</button>
             </div>
           )}
-          {expenses.map(e=>(
-            <div key={e.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 90px 120px 110px auto",gap:6,alignItems:"center",padding:"5px 4px",fontSize:13}}>
-              <input value={e.name} onChange={ev=>editExp(e.id,"name",ev.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
-              <input value={e.cat} onChange={ev=>editExp(e.id,"cat",ev.target.value)} style={{...sjInp,fontSize:11,color:SC.sub}}/>
-              <input value={e.amount} onChange={ev=>editExp(e.id,"amount",ev.target.value)} style={{...sjInp,textAlign:"right"}}/>
-              <FreqSel v={e.freq} on={v=>editExp(e.id,"freq",v)}/>
-              <button onClick={()=>delExp(e.id)} style={sjDel}>ลบ</button>
+          {tax.deductions.map(d=>(
+            <div key={d.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 130px auto",gap:8,alignItems:"center",padding:"5px 4px",fontSize:13}}>
+              <input value={d.name} onChange={e=>editD(d.id,"name",e.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
+              <input value={d.amount} onChange={e=>editD(d.id,"amount",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
+              <button onClick={()=>delD(d.id)} style={sjDel}>ลบ</button>
             </div>
           ))}
-          <div style={{marginTop:8,fontSize:11,color:SC.muted}}>* ระบบแปลงทุกความถี่เป็นยอดต่อเดือนอัตโนมัติเพื่อสรุป cashflow</div>
+          <div style={{display:"flex",justifyContent:"space-between",borderTop:`2px solid #6366f1`,marginTop:8,paddingTop:8,fontWeight:800}}>
+            <span>รวมค่าลดหย่อน</span><span style={{fontFamily:"'DM Mono',monospace",color:"#6366f1"}}>{fmt(deductTotal)} ฿</span>
+          </div>
+          <div style={{marginTop:12,fontSize:11,color:SC.muted,lineHeight:1.6}}>
+            💡 ซื้อ <b>ThaiESG/RMF/SSF</b> หรือประกันเพิ่ม จะลดเงินได้สุทธิ → ประหยัดภาษีที่อัตราขั้นบันไดสูงสุด <b>{fmt(mRate*100,0)}%</b> ของยอดที่ซื้อ<br/>
+            * อิงแบบ ภ.ง.ด.91 ปีภาษี 2568 ที่ยื่นจริง — ปรับตัวเลขได้ ระบบคำนวณภาษีขั้นบันไดให้อัตโนมัติ
+          </div>
         </div>
       </div>
     </>
@@ -749,14 +971,17 @@ function App() {
   const fileRef=useRef();
   const backupFileRef=useRef();
 
-  // ── SJ Company: funds / income / expense / cards ──
+  // ── SJ Company: funds / income / expense / invest / cards / tax ──
   const sjStored=sjLoad()||SJ_DEFAULT;
   const [funds,    setFunds]    = useState(sjStored.funds    ?? SJ_FUNDS_SEED);
   const [fundBuys, setFundBuys] = useState(sjStored.fundBuys ?? SJ_FUNDBUYS_SEED);
   const [income,   setIncome]   = useState(sjStored.income   ?? SJ_INCOME_SEED);
   const [expenses, setExpenses] = useState(sjStored.expenses ?? SJ_EXPENSE_SEED);
+  const [invest,   setInvest]   = useState(sjStored.invest   ?? SJ_INVEST_SEED);
   const [cards,    setCards]    = useState(sjStored.cards    ?? SJ_CARDS_SEED);
-  useEffect(()=>{ sjSave({funds,fundBuys,income,expenses,cards}); },[funds,fundBuys,income,expenses,cards]);
+  const [tax,      setTax]      = useState(sjStored.tax      ?? SJ_TAX_SEED);
+  const [cfYear,   setCfYear]   = useState("2568");
+  useEffect(()=>{ sjSave({funds,fundBuys,income,expenses,invest,cards,tax}); },[funds,fundBuys,income,expenses,invest,cards,tax]);
 
   // ── computed ────────────────────────────────────
   const activePorts=selPort==="all"?ports:ports.filter(p=>p.id===selPort);
@@ -783,9 +1008,18 @@ function App() {
   // ── SJ unified aggregates ──
   const fundsValue=funds.reduce((a,f)=>a+(+f.value||0),0), fundsCost=funds.reduce((a,f)=>a+(+f.cost||0),0), fundsPnL=fundsValue-fundsCost;
   const cardsBalance=cards.reduce((a,c)=>a+(+c.balance||0),0);
-  const incMonthly=income.reduce((a,i)=>a+toMonthly(i.amount,i.freq),0);
-  const expMonthly=expenses.reduce((a,e)=>a+toMonthly(e.amount,e.freq),0);
-  const netMonthly=incMonthly-expMonthly;
+  // ใช้ปีล่าสุดที่มีข้อมูลครบ (2568) เป็นฐานสรุปต่อเดือนในภาพรวม
+  const ovYear="2568";
+  const incYearTotal=income.filter(i=>i.year===ovYear).reduce((a,i)=>a+(+i.amount||0),0);
+  const expYearTotal=expenses.filter(e=>e.year===ovYear).reduce((a,e)=>a+(+e.amount||0),0);
+  const incMonthly=incYearTotal/12, expMonthly=expYearTotal/12, netMonthly=incMonthly-expMonthly;
+  // ภาษีทั้งปี (คำนวณสด)
+  const taxAfterExempt=(+tax.grossIncome||0)-(+tax.exempt||0);
+  const taxExpenseDed=Math.min(taxAfterExempt*0.5,100000);
+  const taxDeductTotal=tax.deductions.reduce((a,d)=>a+(+d.amount||0),0);
+  const taxNet=Math.max(0,taxAfterExempt-taxExpenseDed-taxDeductTotal);
+  const taxDue=calcThaiTax(taxNet);
+  const taxPayMore=taxDue-(+tax.wht||0);
   // Net worth = หุ้น(MV) + เงินสด + กองทุน − หนี้บัตรเครดิต
   const netWorth=stocksMV+totalCash+fundsValue-cardsBalance;
   // pnlPct: คิดจาก stock_cost+cash (total capital deployed)
@@ -915,7 +1149,7 @@ function App() {
   const inp={background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,padding:"8px 12px",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",width:"100%"};
   const btn=bg=>({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:12,fontFamily:"inherit",transition:"opacity .15s"});
 
-  const TABS=[["overview","ภาพรวม"],["holdings","หุ้น"],["funds","กองทุน"],["cashflow","รายรับ-จ่าย"],["cards","บัตรเครดิต"],["analysis","วิเคราะห์"],["manage","จัดการพอร์ต"],["transactions","รายการ"]];
+  const TABS=[["overview","ภาพรวม"],["holdings","หุ้น"],["funds","กองทุน"],["cashflow","รายรับ-จ่าย"],["tax","ภาษี"],["cards","บัตรเครดิต"],["analysis","วิเคราะห์"],["manage","จัดการพอร์ต"],["transactions","รายการ"]];
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans','Noto Sans Thai',sans-serif"}}>
@@ -992,7 +1226,7 @@ function App() {
               <div>
                 <div style={{fontSize:13,opacity:.85,fontWeight:600}}>💎 SJ Company · ความมั่งคั่งสุทธิ (Net Worth)</div>
                 <div className="sj-nw-amt" style={{fontSize:38,fontWeight:800,fontFamily:"'DM Mono',monospace",lineHeight:1.1,marginTop:4}}>฿{fmt(netWorth)}</div>
-                <div style={{fontSize:13,opacity:.9,marginTop:4}}>คงเหลือสุทธิ/เดือน: <b>{netMonthly>=0?"+":""}{fmt(netMonthly)} ฿</b> · ปันผล+เงินเดือน รวม {fmt(incMonthly)} ฿/ด.</div>
+                <div style={{fontSize:13,opacity:.9,marginTop:4}}>คงเหลือ/เดือน (ปี {ovYear}): <b>{netMonthly>=0?"+":""}{fmt(netMonthly,0)} ฿</b> · ภาษีทั้งปี <b>{fmt(taxDue,0)} ฿</b> · {taxPayMore>=0?"จ่ายเพิ่ม":"ได้คืน"} <b>{fmt(Math.abs(taxPayMore),0)} ฿</b></div>
               </div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                 {[
@@ -1104,7 +1338,10 @@ function App() {
         {tab==="funds"&&<FundsView funds={funds} setFunds={setFunds} fundBuys={fundBuys} setFundBuys={setFundBuys}/>}
 
         {/* ══ CASHFLOW ══ */}
-        {tab==="cashflow"&&<CashflowView income={income} setIncome={setIncome} expenses={expenses} setExpenses={setExpenses}/>}
+        {tab==="cashflow"&&<CashflowView income={income} setIncome={setIncome} expenses={expenses} setExpenses={setExpenses} invest={invest} setInvest={setInvest} year={cfYear} setYear={setCfYear}/>}
+
+        {/* ══ TAX ══ */}
+        {tab==="tax"&&<TaxView tax={tax} setTax={setTax}/>}
 
         {/* ══ CREDIT CARDS ══ */}
         {tab==="cards"&&<CardsView cards={cards} setCards={setCards}/>}
