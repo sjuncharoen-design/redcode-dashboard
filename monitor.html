@@ -12,12 +12,6 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans','Noto Sans Thai',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
-:root{
-  --advice:#6366f1;--com7:#10b981;--jmart:#f59e0b;
-  --bg1:#0f172a;--bg2:#1e293b;--bg3:#334155;--bg4:#475569;
-  --text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
-  --green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#38bdf8;
-}
 </style>
 </head>
 <body>
@@ -25,131 +19,122 @@ body{font-family:'DM Sans','Noto Sans Thai',sans-serif;background:#0f172a;color:
 <script type="text/babel">
 const {useState,useEffect,useRef}=React;
 
-// ─── shared constants ────────────────────────────────────────────────────────
 const STOCKS=['ADVICE','COM7','JMART'];
 const STOCK_COLOR={'ADVICE':'#6366f1','COM7':'#10b981','JMART':'#f59e0b'};
 const TRAFFIC_CFG={
-  google_trends:{label:'Google Trends',w:0.35,max:100},
-  similarweb:   {label:'SimilarWeb',   w:0.30,max:5000},
-  app_downloads:{label:'App DL',       w:0.20,max:500},
-  google_reviews:{label:'Reviews',     w:0.15,max:200},
-  shopee_sales: {label:'Shopee',       w:0.10,max:10000},
-  manual_count: {label:'Manual',       w:0.05,max:100},
+  google_trends: {label:'Google Trends',w:0.35,max:100},
+  similarweb:    {label:'SimilarWeb',   w:0.30,max:5000},
+  app_downloads: {label:'App DL',       w:0.20,max:500},
+  google_reviews:{label:'Reviews',      w:0.15,max:200},
+  shopee_sales:  {label:'Shopee',       w:0.10,max:10000},
+  manual_count:  {label:'Manual',       w:0.05,max:100},
 };
+const CRED={pantip:4,facebook:2,facebook_grp:2,twitter:3,google_rev:4,google_reviews:4,
+            official:5,news:5,news_official:5,tiktok:2,shopee_rev:3};
 
-// ─── data helpers ────────────────────────────────────────────────────────────
+// ─── data layer ──────────────────────────────────────────────────────────────
 function loadSocial(){
-  try{ return JSON.parse(localStorage.getItem('rc_social_v1')||'null'); } catch{ return null; }
+  try{ return JSON.parse(localStorage.getItem('rc_social_v1')||'null'); }catch{ return null; }
 }
+function getSD(data,stock){ return data?.stocks?.[stock]||{prices:[],sentiments:[],traffic:[],news:[]}; }
 
-function calcSentiment(entries, stock){
-  const src=(entries||[]).filter(e=>e.stock===stock);
-  if(!src.length) return null;
-  const CRED={pantip:4,facebook:2,twitter:3,google_reviews:4,official:5,news:5,tiktok:2};
-  let num=0,den=0;
-  src.forEach(e=>{
+function calcSentiment(sentiments){
+  if(!sentiments?.length) return null;
+  let ws=0,wt=0;
+  sentiments.forEach(e=>{
     const c=CRED[e.source]||2;
-    const w=c*(e.feedbackCount||1);
-    num+=e.score*w; den+=w;
+    const w=c*Math.max(1,e.feedbackCount||1);
+    const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0;
+    ws+=v*w; wt+=w;
   });
-  return den? Math.round(num/den) : 0;
+  return wt? Math.round(ws/wt*100) : null;
 }
 
-function calcTraffic(entries, stock){
-  const now=Date.now(); const day30=30*86400000;
-  const src=(entries||[]).filter(e=>e.stock===stock && (now-new Date(e.date).getTime())<day30);
-  if(!src.length) return null;
+function calcTraffic(traffic){
+  if(!traffic?.length) return null;
+  const cutDate=new Date(); cutDate.setDate(cutDate.getDate()-30);
+  const cut=cutDate.toISOString().slice(0,10);
+  const recent=traffic.filter(t=>t.date>=cut);
+  if(!recent.length) return null;
   const latest={};
-  src.forEach(e=>{ if(!latest[e.source]||new Date(e.date)>new Date(latest[e.source].date)) latest[e.source]=e; });
-  const keys=Object.keys(latest);
-  let totalW=0,score=0;
-  keys.forEach(k=>{
-    const cfg=TRAFFIC_CFG[k]; if(!cfg) return;
-    score+=cfg.w*(latest[k].value/cfg.max*100);
-    totalW+=cfg.w;
+  recent.forEach(t=>{ if(!latest[t.source]||t.date>latest[t.source].date) latest[t.source]=t; });
+  let ws=0,wt=0;
+  Object.entries(latest).forEach(([src,e])=>{
+    const cfg=TRAFFIC_CFG[src]; if(!cfg) return;
+    ws+=cfg.w*Math.min(100,e.value/cfg.max*100); wt+=cfg.w;
   });
-  return totalW? Math.round(score/totalW) : null;
+  return wt? Math.round(ws/wt) : null;
 }
 
-function calcPromoAlert(prices, stock){
-  const src=(prices||[]).filter(e=>e.stock===stock);
-  if(src.length<2) return null;
-  const monday=d=>{const dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.getTime();};
+function calcPromoAlert(prices){
+  if(!prices?.length) return null;
+  const monday=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
   const byWeek={};
-  src.forEach(e=>{
+  prices.forEach(e=>{
+    if(!e.promoScore) return;
     const w=monday(e.date);
     if(!byWeek[w]) byWeek[w]={sum:0,n:0};
-    byWeek[w].sum+=(e.promoScore||1); byWeek[w].n++;
+    byWeek[w].sum+=e.promoScore; byWeek[w].n++;
   });
-  const weeks=Object.keys(byWeek).sort((a,b)=>+a-+b);
+  const weeks=Object.keys(byWeek).sort();
   if(weeks.length<2) return null;
-  const curWeek=weeks[weeks.length-1];
-  const histWeeks=weeks.slice(0,-1);
-  const cur=byWeek[curWeek].sum/byWeek[curWeek].n;
-  const base=histWeeks.reduce((s,w)=>s+byWeek[w].sum/byWeek[w].n,0)/histWeeks.length;
-  return {cur:Math.round(cur*10)/10, base:Math.round(base*10)/10, ratio:cur/base, alert:cur/base>=1.25};
+  const cur=byWeek[weeks[weeks.length-1]].sum/byWeek[weeks[weeks.length-1]].n;
+  const base=weeks.slice(0,-1).reduce((s,w)=>s+byWeek[w].sum/byWeek[w].n,0)/(weeks.length-1);
+  return {cur:Math.round(cur*10)/10,base:Math.round(base*10)/10,ratio:cur/base,alert:cur/base>=1.25};
 }
 
 function signalLabel(score){
   if(score===null) return {emoji:'⚫',label:'ไม่มีข้อมูล',color:'#64748b'};
-  if(score>=20) return {emoji:'🟢',label:'Bullish',color:'#22c55e'};
-  if(score<=-20) return {emoji:'🔴',label:'Bearish',color:'#ef4444'};
+  if(score>=20)   return {emoji:'🟢',label:'Bullish',color:'#22c55e'};
+  if(score<=-20)  return {emoji:'🔴',label:'Bearish',color:'#ef4444'};
   return {emoji:'🟡',label:'Neutral',color:'#eab308'};
 }
-
-function timeAgo(dateStr){
-  if(!dateStr) return '—';
-  const d=Math.floor((Date.now()-new Date(dateStr).getTime())/86400000);
-  if(d===0) return 'วันนี้'; if(d===1) return 'เมื่อวาน'; return `${d} วันที่แล้ว`;
+function timeAgo(d){
+  if(!d) return '—';
+  const n=Math.floor((Date.now()-new Date(d).getTime())/86400000);
+  return n===0?'วันนี้':n===1?'เมื่อวาน':`${n} วันที่แล้ว`;
 }
 
-// ─── mini sparkline (SVG) ────────────────────────────────────────────────────
-function Sparkline({data,color='#38bdf8',width=100,height=32}){
-  if(!data||data.length<2) return <span style={{color:'#475569',fontSize:12}}>—</span>;
-  const min=Math.min(...data), max=Math.max(...data);
-  const range=max-min||1;
-  const pts=data.map((v,i)=>`${Math.round(i/(data.length-1)*(width-4)+2)},${Math.round((1-(v-min)/range)*(height-4)+2)}`).join(' ');
-  const trend=data[data.length-1]-data[0];
-  const tc=trend>0?'#22c55e':trend<0?'#ef4444':'#64748b';
+// ─── primitive UI ─────────────────────────────────────────────────────────────
+function Sparkline({points,color='#38bdf8',w=100,h=28}){
+  if(!points||points.length<2) return <span style={{color:'#475569',fontSize:11}}>—</span>;
+  const mn=Math.min(...points),mx=Math.max(...points),rng=mx-mn||1;
+  const pts=points.map((v,i)=>`${Math.round(i/(points.length-1)*(w-4)+2)},${Math.round((1-(v-mn)/rng)*(h-4)+2)}`).join(' ');
+  const last=pts.split(' ').pop().split(',');
+  const tc=points[points.length-1]>points[0]?'#22c55e':points[points.length-1]<points[0]?'#ef4444':'#64748b';
   return(
-    <svg width={width} height={height} style={{display:'block'}}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx={pts.split(' ').pop().split(',')[0]} cy={pts.split(' ').pop().split(',')[1]} r="3" fill={tc}/>
+    <svg width={w} height={h} style={{display:'block'}}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={last[0]} cy={last[1]} r="3" fill={tc}/>
     </svg>
   );
 }
 
-// ─── gauge arc ───────────────────────────────────────────────────────────────
-function GaugeArc({score,size=80}){
+function GaugeArc({score,size=82}){
   const pct=Math.max(0,Math.min(1,(score+100)/200));
-  const R=size*0.42, cx=size/2, cy=size/2;
-  const startA=-Math.PI*0.8, endA=Math.PI*0.8;
-  const angle=startA+(endA-startA)*pct;
-  const polar=(a)=>({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)});
-  const s=polar(startA),e=polar(endA),p=polar(angle);
-  const bgPath=`M${s.x},${s.y} A${R},${R} 0 1 1 ${e.x},${e.y}`;
-  const fgPath=`M${s.x},${s.y} A${R},${R} 0 ${pct>0.5?1:0} 1 ${p.x},${p.y}`;
+  const R=size*0.42,cx=size/2,cy=size/2;
+  const sA=-Math.PI*0.8,eA=Math.PI*0.8;
+  const ang=sA+(eA-sA)*pct;
+  const p=(a)=>({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)});
+  const s=p(sA),e=p(eA),c=p(ang);
   const color=score>=20?'#22c55e':score<=-20?'#ef4444':'#eab308';
   return(
     <svg width={size} height={size} style={{display:'block',margin:'0 auto'}}>
-      <path d={bgPath} fill="none" stroke="#334155" strokeWidth="6" strokeLinecap="round"/>
-      <path d={fgPath} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"/>
-      <text x={cx} y={cy+4} textAnchor="middle" fontSize={size*0.22} fontWeight="700" fill={color} fontFamily="DM Mono,monospace">
-        {score>0?'+':''}{score}
-      </text>
+      <path d={`M${s.x},${s.y} A${R},${R} 0 1 1 ${e.x},${e.y}`} fill="none" stroke="#334155" strokeWidth="6" strokeLinecap="round"/>
+      <path d={`M${s.x},${s.y} A${R},${R} 0 ${pct>0.5?1:0} 1 ${c.x},${c.y}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"/>
+      <text x={cx} y={cy+4} textAnchor="middle" fontSize={size*0.22} fontWeight="700" fill={color} fontFamily="DM Mono,monospace">{score>0?'+':''}{score}</text>
       <text x={cx} y={cy+size*0.22} textAnchor="middle" fontSize={size*0.12} fill="#64748b" fontFamily="DM Sans,sans-serif">sentiment</text>
     </svg>
   );
 }
 
-// ─── mini bar ────────────────────────────────────────────────────────────────
 function MiniBar({value,max=100,color,label,sub}){
-  const pct=Math.max(0,Math.min(100,(value/max*100)));
+  const pct=Math.max(0,Math.min(100,value/max*100));
   return(
-    <div style={{marginBottom:6}}>
-      <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#94a3b8',marginBottom:2}}>
+    <div style={{marginBottom:5}}>
+      {(label||sub)&&<div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#94a3b8',marginBottom:2}}>
         <span>{label}</span><span style={{fontFamily:'DM Mono',color:'#e2e8f0'}}>{sub}</span>
-      </div>
+      </div>}
       <div style={{background:'#334155',borderRadius:3,height:5}}>
         <div style={{width:`${pct}%`,height:'100%',borderRadius:3,background:color,transition:'width .4s'}}/>
       </div>
@@ -157,175 +142,231 @@ function MiniBar({value,max=100,color,label,sub}){
   );
 }
 
-// ─── alert badge ─────────────────────────────────────────────────────────────
 function AlertBadge({type,text}){
-  const styles={
-    warning:{bg:'#451a03',border:'#92400e',color:'#fbbf24',icon:'⚠️'},
-    good:   {bg:'#052e16',border:'#166534',color:'#4ade80',icon:'✅'},
-    info:   {bg:'#0c1a2e',border:'#1e40af',color:'#60a5fa',icon:'ℹ️'},
-    neutral:{bg:'#1e293b',border:'#334155',color:'#94a3b8',icon:'⚪'},
-  };
-  const s=styles[type]||styles.neutral;
+  const S={warning:{bg:'#451a03',bc:'#92400e',c:'#fbbf24',icon:'⚠️'},good:{bg:'#052e16',bc:'#166534',c:'#4ade80',icon:'✅'},neutral:{bg:'#1e293b',bc:'#334155',c:'#94a3b8',icon:'⚪'}};
+  const s=S[type]||S.neutral;
   return(
-    <div style={{background:s.bg,border:`1px solid ${s.border}`,borderRadius:6,padding:'4px 8px',fontSize:11,color:s.color,display:'inline-flex',alignItems:'center',gap:4,marginRight:4,marginBottom:4}}>
+    <div style={{background:s.bg,border:`1px solid ${s.bc}`,borderRadius:6,padding:'4px 8px',fontSize:11,color:s.c,display:'inline-flex',alignItems:'center',gap:4,marginRight:4,marginBottom:4}}>
       {s.icon} {text}
     </div>
   );
 }
 
-// ─── stock card ──────────────────────────────────────────────────────────────
-function StockCard({stock,data}){
-  const color=STOCK_COLOR[stock];
-  const prices=data?.prices||[];
-  const sentiment=data?.sentiment||[];
-  const traffic=data?.traffic||[];
-  const news=data?.news||[];
+// ─── sector heatmap ───────────────────────────────────────────────────────────
+function heatBg(norm){
+  if(norm===null) return '#1e293b';
+  const h=Math.round(norm*1.2); // 0=red, 60=yellow, 120=green
+  return `hsl(${h},55%,22%)`;
+}
+function heatText(norm){
+  if(norm===null) return '#475569';
+  return norm>=60?'#86efac':norm>=35?'#fde68a':'#fca5a5';
+}
 
-  const sentScore=calcSentiment(sentiment,stock);
-  const sig=signalLabel(sentScore);
-  const trafficScore=calcTraffic(traffic,stock);
-  const promo=calcPromoAlert(prices,stock);
+function SectorHeatmap({data}){
+  const COLS=[
+    {key:'sent',   label:'Sentiment', sub:'−100→+100', tip:'ถ่วงน้ำหนักความน่าเชื่อถือ'},
+    {key:'traf',   label:'Traffic',   sub:'0→100',     tip:'composite หลายแหล่ง'},
+    {key:'promo',  label:'Promo Δ',   sub:'vs baseline',tip:'>+25% = ⚠️'},
+    {key:'newsPos',label:'News+',     sub:'% ข่าวบวก', tip:'% ข่าวเชิงบวก'},
+    {key:'verif',  label:'Verified',  sub:'% ยืนยัน',  tip:'% entry ที่ verify แล้ว'},
+    {key:'cov',    label:'Coverage',  sub:'หมวด/4',    tip:'มีข้อมูลครบแค่ไหน'},
+  ];
 
-  // week-over-week sentiment sparkline (last 4 weeks avg)
-  const weeklyScores=(()=>{
-    const monday=d=>{const dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.getTime();};
-    const byWeek={};
-    sentiment.filter(e=>e.stock===stock).forEach(e=>{
-      const w=monday(e.date);
-      if(!byWeek[w]) byWeek[w]=[];
-      byWeek[w].push(e.score);
-    });
-    return Object.keys(byWeek).sort((a,b)=>+a-+b).slice(-6).map(w=>byWeek[w].reduce((s,v)=>s+v,0)/byWeek[w].length);
-  })();
+  function getRow(stock){
+    const sd=getSD(data,stock);
+    const sent=calcSentiment(sd.sentiments);
+    const traf=calcTraffic(sd.traffic);
+    const promo=calcPromoAlert(sd.prices);
+    const news=sd.news||[];
+    const newsPos=news.length? Math.round(news.filter(n=>n.sentiment==='positive').length/news.length*100) : null;
+    const all=[...(sd.prices||[]),...(sd.sentiments||[]),...(sd.traffic||[]),...(sd.news||[])];
+    const verif=all.length? Math.round(all.filter(e=>e.verified).length/all.length*100) : null;
+    const cats=[(sd.prices||[]).length,(sd.sentiments||[]).length,(sd.traffic||[]).length,(sd.news||[]).length].filter(Boolean).length;
+    const cov=Math.round(cats/4*100);
 
-  // top product prices
-  const byProduct={};
-  prices.filter(e=>e.stock===stock).forEach(e=>{
-    if(!byProduct[e.product]) byProduct[e.product]=[];
-    byProduct[e.product].push(e);
-  });
-  const topProducts=Object.keys(byProduct).slice(0,3);
-  const latestPrices={};
-  topProducts.forEach(p=>{
-    const sorted=byProduct[p].sort((a,b)=>new Date(b.date)-new Date(a.date));
-    latestPrices[p]=sorted[0];
-  });
+    // norm 0-100 (100=best)
+    const promoNorm = promo ? Math.max(0, Math.round(100-(promo.ratio-1)*200)) : null;
+    return {
+      sent:    {val:sent,   norm:sent!==null?(sent+100)/2:null,           fmt:sent!==null?(sent>0?`+${sent}`:`${sent}`):'—'},
+      traf:    {val:traf,   norm:traf,                                     fmt:traf!==null?`${traf}/100`:'—'},
+      promo:   {val:promo?.ratio, norm:promoNorm,                          fmt:promo?`${Math.round((promo.ratio-1)*100)>0?'+':''}${Math.round((promo.ratio-1)*100)}%`:'—', alert:promo?.alert},
+      newsPos: {val:newsPos, norm:newsPos,                                 fmt:newsPos!==null?`${newsPos}%`:'—'},
+      verif:   {val:verif,  norm:verif,                                    fmt:verif!==null?`${verif}%`:'—'},
+      cov:     {val:cov,    norm:cov,                                      fmt:`${cats}/4`},
+    };
+  }
 
-  // latest entry dates
-  const allDates=[
-    ...prices.filter(e=>e.stock===stock).map(e=>e.date),
-    ...sentiment.filter(e=>e.stock===stock).map(e=>e.date),
-    ...traffic.filter(e=>e.stock===stock).map(e=>e.date),
-  ].sort().reverse();
-  const lastUpdated=allDates[0];
+  const rows=STOCKS.map(s=>({stock:s,m:getRow(s)}));
 
-  // alerts array
-  const alerts=[];
-  if(promo?.alert) alerts.push({type:'warning',text:`โปรเพิ่ม ${Math.round((promo.ratio-1)*100)}% จากปกติ`});
-  if(sentScore!==null&&sentScore<=-30) alerts.push({type:'warning',text:'Sentiment ต่ำมาก'});
-  if(sentScore!==null&&sentScore>=40)  alerts.push({type:'good',text:'Sentiment สูง'});
-  if(trafficScore!==null&&trafficScore>=70) alerts.push({type:'good',text:`Traffic ${trafficScore}/100`});
-  if(trafficScore!==null&&trafficScore<=30) alerts.push({type:'warning',text:`Traffic ต่ำ ${trafficScore}/100`});
-  if(news.filter(e=>e.stock===stock&&e.sentiment==='negative').length>=2) alerts.push({type:'warning',text:'ข่าวลบหลายชิ้น'});
-  if(alerts.length===0) alerts.push({type:'neutral',text:'ปกติ'});
-
+  const thSt={padding:'8px 10px',fontSize:11,fontWeight:700,color:'#64748b',textAlign:'center',background:'#0f172a',textTransform:'uppercase',letterSpacing:.5};
   return(
-    <div style={{background:'#1e293b',border:`1px solid #334155`,borderRadius:12,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-      {/* header */}
-      <div style={{background:`${color}18`,borderBottom:`2px solid ${color}`,padding:'12px 16px',display:'flex',alignItems:'center',gap:10}}>
-        <div style={{width:10,height:10,borderRadius:'50%',background:color,boxShadow:`0 0 8px ${color}`}}/>
-        <span style={{fontWeight:700,fontSize:18,color:'#f1f5f9'}}>{stock}</span>
-        <span style={{marginLeft:'auto',fontSize:11,color:'#64748b'}}>อัพเดต: {timeAgo(lastUpdated)}</span>
-      </div>
-
-      <div style={{padding:'16px',flex:1,display:'flex',flexDirection:'column',gap:16}}>
-
-        {/* signal + gauge row */}
-        <div style={{display:'flex',alignItems:'center',gap:16}}>
-          <GaugeArc score={sentScore??0} size={88}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:22}}>{sig.emoji}</div>
-            <div style={{fontWeight:700,fontSize:16,color:sig.color,marginBottom:2}}>{sig.label}</div>
-            <div style={{fontSize:11,color:'#64748b'}}>จาก {sentiment.filter(e=>e.stock===stock).length} แหล่ง</div>
-            {weeklyScores.length>=2&&<div style={{marginTop:6}}>
-              <Sparkline data={weeklyScores} color={sig.color} width={90} height={28}/>
-              <div style={{fontSize:10,color:'#475569'}}>trend 6 สัปดาห์</div>
-            </div>}
-          </div>
-        </div>
-
-        {/* alerts */}
-        <div>
-          <div style={{fontSize:11,color:'#475569',marginBottom:4}}>สัญญาณ</div>
-          <div>{alerts.map((a,i)=><AlertBadge key={i} type={a.type} text={a.text}/>)}</div>
-        </div>
-
-        {/* traffic */}
-        <div>
-          <div style={{fontSize:11,color:'#475569',marginBottom:6}}>Traffic Composite</div>
-          {trafficScore!==null?(
-            <>
-              <MiniBar value={trafficScore} max={100} color={trafficScore>=60?'#22c55e':trafficScore>=40?'#eab308':'#ef4444'} label="" sub={`${trafficScore}/100`}/>
-              <div style={{fontSize:10,color:'#475569'}}>{traffic.filter(e=>e.stock===stock).length} แหล่งข้อมูล</div>
-            </>
-          ):<span style={{fontSize:12,color:'#475569'}}>ยังไม่มีข้อมูล Traffic</span>}
-        </div>
-
-        {/* promo intensity */}
-        {promo&&(
-          <div>
-            <div style={{fontSize:11,color:'#475569',marginBottom:4}}>Promo Intensity</div>
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <div style={{fontSize:20}}>{promo.alert?'🔥':'⚪'}</div>
-              <div>
-                <div style={{fontSize:13,fontFamily:'DM Mono',color:promo.alert?'#fbbf24':'#94a3b8'}}>
-                  สัปดาห์นี้: {promo.cur} / baseline: {promo.base}
-                </div>
-                {promo.alert&&<div style={{fontSize:11,color:'#f59e0b'}}>โปรเพิ่มขึ้น {Math.round((promo.ratio-1)*100)}% จากปกติ</div>}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* price snapshot */}
-        {topProducts.length>0&&(
-          <div>
-            <div style={{fontSize:11,color:'#475569',marginBottom:6}}>ราคาล่าสุด</div>
-            <div style={{display:'flex',flexDirection:'column',gap:4}}>
-              {topProducts.map(p=>{
-                const e=latestPrices[p];
-                return(
-                  <div key={p} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'4px 8px',background:'#0f172a',borderRadius:5}}>
-                    <span style={{color:'#94a3b8',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p}</span>
-                    <span style={{fontFamily:'DM Mono',color:'#f1f5f9',marginLeft:8}}>
-                      {e?.price? `฿${e.price.toLocaleString()}` :'—'}
-                    </span>
-                    {e?.verified&&<span style={{color:'#22c55e',fontSize:10,marginLeft:4}}>✓</span>}
+    <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'18px 20px',marginBottom:16,overflowX:'auto'}}>
+      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:14}}>🌡️ Sector Heatmap</div>
+      <table style={{width:'100%',borderCollapse:'separate',borderSpacing:3}}>
+        <thead>
+          <tr>
+            <th style={{...thSt,textAlign:'left',minWidth:80}}>Stock</th>
+            {COLS.map(c=>(
+              <th key={c.key} style={{...thSt,minWidth:80}} title={c.tip}>
+                <div>{c.label}</div>
+                <div style={{fontSize:9,color:'#475569',fontWeight:400,marginTop:1}}>{c.sub}</div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({stock,m})=>{
+            const color=STOCK_COLOR[stock];
+            return(
+              <tr key={stock}>
+                <td style={{padding:'8px 10px'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:7}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:color,boxShadow:`0 0 6px ${color}`}}/>
+                    <span style={{fontWeight:700,color:'#f1f5f9',fontSize:13}}>{stock}</span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
+                </td>
+                {COLS.map(c=>{
+                  const cell=m[c.key];
+                  const bg=heatBg(cell.norm);
+                  const tc=heatText(cell.norm);
+                  return(
+                    <td key={c.key} style={{background:bg,borderRadius:6,padding:'8px 6px',textAlign:'center',border:'2px solid #0f172a'}}>
+                      <div style={{fontFamily:'DM Mono',fontSize:13,fontWeight:700,color:tc}}>{cell.fmt}</div>
+                      {cell.alert&&<div style={{fontSize:9,color:'#fbbf24',marginTop:1}}>⚠️ spike</div>}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div style={{display:'flex',gap:16,marginTop:10,fontSize:10,color:'#64748b'}}>
+        <span style={{color:'#86efac'}}>■ ≥60 ดี</span>
+        <span style={{color:'#fde68a'}}>■ 35–59 กลางๆ</span>
+        <span style={{color:'#fca5a5'}}>■ &lt;35 ต้องปรับ</span>
+        <span style={{color:'#475569'}}>■ — ไม่มีข้อมูล</span>
       </div>
     </div>
   );
 }
 
-// ─── alerts summary panel ─────────────────────────────────────────────────────
+// ─── stock card ──────────────────────────────────────────────────────────────
+function StockCard({stock,sd}){
+  const color=STOCK_COLOR[stock];
+  const prices   =sd?.prices||[];
+  const sentiments=sd?.sentiments||[];
+  const traffic  =sd?.traffic||[];
+  const news     =sd?.news||[];
+
+  const sentScore=calcSentiment(sentiments);
+  const sig=signalLabel(sentScore);
+  const trafficScore=calcTraffic(traffic);
+  const promo=calcPromoAlert(prices);
+
+  const weeklyScores=(()=>{
+    const mon=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
+    const byW={};
+    sentiments.forEach(e=>{
+      const w=mon(e.date); if(!byW[w]) byW[w]=[];
+      byW[w].push(e.sentiment==='positive'?100:e.sentiment==='negative'?-100:0);
+    });
+    return Object.keys(byW).sort().slice(-6).map(w=>byW[w].reduce((s,v)=>s+v,0)/byW[w].length);
+  })();
+
+  const byProduct={};
+  prices.forEach(e=>{if(!byProduct[e.product])byProduct[e.product]=[];byProduct[e.product].push(e);});
+  const topProducts=Object.keys(byProduct).slice(0,3);
+  const latestPrices={};
+  topProducts.forEach(p=>{latestPrices[p]=[...byProduct[p]].sort((a,b)=>b.date.localeCompare(a.date))[0];});
+
+  const allDates=[...prices,...sentiments,...traffic].map(e=>e.date).sort().reverse();
+  const lastUpdated=allDates[0];
+
+  const alerts=[];
+  if(promo?.alert) alerts.push({type:'warning',text:`โปร +${Math.round((promo.ratio-1)*100)}%`});
+  if(sentScore!==null&&sentScore<=-30) alerts.push({type:'warning',text:'Sentiment ต่ำ'});
+  if(sentScore!==null&&sentScore>=40)  alerts.push({type:'good',   text:'Sentiment สูง'});
+  if(trafficScore!==null&&trafficScore>=70) alerts.push({type:'good',text:`Traffic ${trafficScore}`});
+  if(trafficScore!==null&&trafficScore<=30) alerts.push({type:'warning',text:`Traffic ต่ำ ${trafficScore}`});
+  if(news.filter(n=>n.sentiment==='negative').length>=2) alerts.push({type:'warning',text:'ข่าวลบ'});
+  if(!alerts.length) alerts.push({type:'neutral',text:'ปกติ'});
+
+  return(
+    <div style={{background:'#1e293b',border:`1px solid #334155`,borderRadius:12,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+      <div style={{background:`${color}18`,borderBottom:`2px solid ${color}`,padding:'12px 16px',display:'flex',alignItems:'center',gap:10}}>
+        <div style={{width:9,height:9,borderRadius:'50%',background:color,boxShadow:`0 0 8px ${color}`}}/>
+        <span style={{fontWeight:700,fontSize:17,color:'#f1f5f9'}}>{stock}</span>
+        <span style={{marginLeft:'auto',fontSize:11,color:'#64748b'}}>{timeAgo(lastUpdated)}</span>
+      </div>
+      <div style={{padding:'14px 16px',flex:1,display:'flex',flexDirection:'column',gap:14}}>
+
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <GaugeArc score={sentScore??0} size={86}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:20}}>{sig.emoji}</div>
+            <div style={{fontWeight:700,fontSize:15,color:sig.color,marginBottom:2}}>{sig.label}</div>
+            <div style={{fontSize:11,color:'#64748b',marginBottom:6}}>จาก {sentiments.length} แหล่ง</div>
+            {weeklyScores.length>=2&&<>
+              <Sparkline points={weeklyScores} color={sig.color} w={88} h={26}/>
+              <div style={{fontSize:10,color:'#475569'}}>6 สัปดาห์</div>
+            </>}
+          </div>
+        </div>
+
+        <div>
+          <div style={{fontSize:11,color:'#475569',marginBottom:4}}>สัญญาณ</div>
+          {alerts.map((a,i)=><AlertBadge key={i} type={a.type} text={a.text}/>)}
+        </div>
+
+        {trafficScore!==null&&<MiniBar value={trafficScore} max={100}
+          color={trafficScore>=60?'#22c55e':trafficScore>=40?'#eab308':'#ef4444'}
+          label="Traffic" sub={`${trafficScore}/100`}/>}
+
+        {promo&&(
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <div style={{fontSize:18}}>{promo.alert?'🔥':'⚪'}</div>
+            <div>
+              <div style={{fontSize:12,fontFamily:'DM Mono',color:promo.alert?'#fbbf24':'#94a3b8'}}>
+                สัปดาห์นี้: {promo.cur} / base: {promo.base}
+              </div>
+              {promo.alert&&<div style={{fontSize:11,color:'#f59e0b'}}>โปรเพิ่ม {Math.round((promo.ratio-1)*100)}%</div>}
+            </div>
+          </div>
+        )}
+
+        {topProducts.length>0&&(
+          <div>
+            <div style={{fontSize:11,color:'#475569',marginBottom:5}}>ราคาล่าสุด</div>
+            {topProducts.map(p=>{
+              const e=latestPrices[p];
+              return(
+                <div key={p} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'4px 8px',background:'#0f172a',borderRadius:5,marginBottom:3}}>
+                  <span style={{color:'#94a3b8',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p}</span>
+                  <span style={{fontFamily:'DM Mono',color:'#f1f5f9',marginLeft:8}}>{e?.price?`฿${e.price.toLocaleString()}`:'—'}</span>
+                  {e?.verified&&<span style={{color:'#22c55e',fontSize:10,marginLeft:4}}>✓</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── alerts panel ─────────────────────────────────────────────────────────────
 function AlertsPanel({data}){
   const rows=[];
   STOCKS.forEach(stock=>{
-    const prices=data?.prices||[];
-    const sentiment=data?.sentiment||[];
-    const traffic=data?.traffic||[];
-    const promo=calcPromoAlert(prices,stock);
-    const score=calcSentiment(sentiment,stock);
-    const tScore=calcTraffic(traffic,stock);
-    if(promo?.alert) rows.push({stock,type:'warning',text:`โปรโมชั่นเพิ่มขึ้น ${Math.round((promo.ratio-1)*100)}% จากเส้นฐาน`,icon:'🔥'});
-    if(score!==null&&score<=-30) rows.push({stock,type:'warning',text:`Sentiment ลดลงต่ำ (${score})`,icon:'📉'});
-    if(score!==null&&score>=40)  rows.push({stock,type:'good',text:`Sentiment ดี (${score})`,icon:'📈'});
+    const sd=getSD(data,stock);
+    const promo=calcPromoAlert(sd.prices);
+    const score=calcSentiment(sd.sentiments);
+    const tScore=calcTraffic(sd.traffic);
+    if(promo?.alert)         rows.push({stock,type:'warning',text:`โปรโมชั่นเพิ่มขึ้น ${Math.round((promo.ratio-1)*100)}% จาก baseline`,icon:'🔥'});
+    if(score!==null&&score<=-30) rows.push({stock,type:'warning',text:`Sentiment ต่ำมาก (${score})`,icon:'📉'});
+    if(score!==null&&score>=40)  rows.push({stock,type:'good',   text:`Sentiment ดี (+${score})`,  icon:'📈'});
     if(tScore!==null&&tScore<=25) rows.push({stock,type:'warning',text:`Traffic ต่ำมาก (${tScore}/100)`,icon:'👥'});
   });
   if(!rows.length) return(
@@ -352,55 +393,47 @@ function AlertsPanel({data}){
   );
 }
 
-// ─── comparison mini chart ────────────────────────────────────────────────────
-function ComparisonBar({label,values}){
-  // values = [{stock, val, max}]
+// ─── comparison bars ──────────────────────────────────────────────────────────
+function CompBars({data}){
+  const sentVals=STOCKS.map(s=>{const v=calcSentiment(getSD(data,s).sentiments)??0; return {stock:s,val:v+100,max:200,fmt:v>0?`+${v}`:`${v}`};});
+  const trafVals=STOCKS.map(s=>{const v=calcTraffic(getSD(data,s).traffic); return {stock:s,val:v??0,max:100,fmt:v!==null?`${v}/100`:'—'};});
+  const Row=({stock,val,max,fmt})=>(
+    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+      <div style={{width:52,fontSize:11,color:'#94a3b8',textAlign:'right'}}>{stock}</div>
+      <div style={{flex:1,background:'#334155',borderRadius:3,height:7}}>
+        <div style={{width:`${Math.max(0,Math.min(100,val/max*100))}%`,height:'100%',borderRadius:3,background:STOCK_COLOR[stock],transition:'width .4s'}}/>
+      </div>
+      <div style={{width:56,fontSize:11,fontFamily:'DM Mono',color:'#e2e8f0',textAlign:'right'}}>{fmt}</div>
+    </div>
+  );
   return(
-    <div style={{marginBottom:12}}>
-      <div style={{fontSize:12,color:'#64748b',marginBottom:6,fontWeight:600}}>{label}</div>
-      {values.map(({stock,val,max,fmt})=>(
-        <div key={stock} style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-          <div style={{width:50,fontSize:11,color:'#94a3b8',textAlign:'right'}}>{stock}</div>
-          <div style={{flex:1,background:'#334155',borderRadius:3,height:7}}>
-            <div style={{width:`${Math.max(0,Math.min(100,val/max*100))}%`,height:'100%',borderRadius:3,background:STOCK_COLOR[stock],transition:'width .4s'}}/>
-          </div>
-          <div style={{width:60,fontSize:11,fontFamily:'DM Mono',color:'#e2e8f0',textAlign:'right'}}>{fmt||val}</div>
+    <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'18px 20px',marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:14}}>เปรียบเทียบ 3 หุ้น</div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}}>
+        <div>
+          <div style={{fontSize:11,color:'#64748b',marginBottom:8,fontWeight:600}}>Sentiment (−100 → +100)</div>
+          {sentVals.map(v=><Row key={v.stock} {...v}/>)}
         </div>
-      ))}
+        <div>
+          <div style={{fontSize:11,color:'#64748b',marginBottom:8,fontWeight:600}}>Traffic Composite (0 → 100)</div>
+          {trafVals.map(v=><Row key={v.stock} {...v}/>)}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── main app ─────────────────────────────────────────────────────────────────
+// ─── app ──────────────────────────────────────────────────────────────────────
 function App(){
   const [data,setData]=useState(null);
-  const [lastRefresh,setLastRefresh]=useState(new Date());
-  const refreshRef=useRef(null);
+  const [ts,setTs]=useState(new Date());
+  const ref=useRef(null);
+  const load=()=>{ setData(loadSocial()); setTs(new Date()); };
+  useEffect(()=>{ load(); ref.current=setInterval(load,60000); return()=>clearInterval(ref.current); },[]);
 
-  const load=()=>{
-    const raw=loadSocial();
-    setData(raw);
-    setLastRefresh(new Date());
-  };
-
-  useEffect(()=>{
-    load();
-    // auto-refresh every 60s
-    refreshRef.current=setInterval(load,60000);
-    return()=>clearInterval(refreshRef.current);
-  },[]);
-
-  const sentiments=STOCKS.map(s=>({stock:s,val:calcSentiment(data?.sentiment,s)??0,max:100,fmt:(calcSentiment(data?.sentiment,s)??0)>0?`+${calcSentiment(data?.sentiment,s)}`:`${calcSentiment(data?.sentiment,s)??'—'}`}));
-  const traffics=STOCKS.map(s=>({stock:s,val:calcTraffic(data?.traffic,s)??0,max:100,fmt:calcTraffic(data?.traffic,s)!==null?`${calcTraffic(data?.traffic,s)}/100`:'—'}));
-
-  const totalEntries=(data?.prices?.length||0)+(data?.sentiment?.length||0)+(data?.traffic?.length||0)+(data?.news?.length||0);
-  const verified=(
-    (data?.prices?.filter(e=>e.verified)||[]).length+
-    (data?.sentiment?.filter(e=>e.verified)||[]).length+
-    (data?.traffic?.filter(e=>e.verified)||[]).length+
-    (data?.news?.filter(e=>e.verified)||[]).length
-  );
-  const verifiedPct=totalEntries?Math.round(verified/totalEntries*100):0;
+  const allItems=STOCKS.flatMap(s=>{const sd=getSD(data,s); return [...(sd.prices||[]),...(sd.sentiments||[]),...(sd.traffic||[]),...(sd.news||[])];});
+  const verified=allItems.filter(e=>e.verified).length;
+  const verifiedPct=allItems.length?Math.round(verified/allItems.length*100):0;
 
   return(
     <div style={{maxWidth:1100,margin:'0 auto',padding:'20px 16px'}}>
@@ -413,62 +446,53 @@ function App(){
             <span style={{fontSize:22,fontWeight:700,color:'#f1f5f9'}}>📊 Monitor Board</span>
             <span style={{fontSize:12,color:'#64748b'}}>ADVICE · COM7 · JMART</span>
           </div>
-          <div style={{fontSize:11,color:'#475569'}}>
-            รีเฟรชอัตโนมัติทุก 60 วินาที · อัพเดตล่าสุด {lastRefresh.toLocaleTimeString('th-TH')}
-          </div>
+          <div style={{fontSize:11,color:'#475569'}}>รีเฟรชอัตโนมัติทุก 60 วินาที · {ts.toLocaleTimeString('th-TH')}</div>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <a href="social.html" style={{background:'#1e293b',border:'1px solid #334155',borderRadius:7,padding:'6px 14px',color:'#94a3b8',textDecoration:'none',fontSize:13}}>
-            📡 Social Detail
-          </a>
-          <button onClick={load} style={{background:'#6366f1',border:'none',borderRadius:7,padding:'6px 14px',color:'#fff',cursor:'pointer',fontSize:13}}>
-            ↻ รีเฟรช
-          </button>
+          <a href="social.html" style={{background:'#1e293b',border:'1px solid #334155',borderRadius:7,padding:'6px 14px',color:'#94a3b8',textDecoration:'none',fontSize:13}}>📡 Social</a>
+          <button onClick={load} style={{background:'#6366f1',border:'none',borderRadius:7,padding:'6px 14px',color:'#fff',cursor:'pointer',fontSize:13}}>↻ รีเฟรช</button>
         </div>
       </div>
 
-      {/* data quality bar */}
-      <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+      {/* data quality */}
+      <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 16px',marginBottom:14,display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
         <span style={{fontSize:12,color:'#64748b'}}>Data Quality</span>
         <div style={{flex:1,minWidth:120,background:'#334155',borderRadius:3,height:6}}>
           <div style={{width:`${verifiedPct}%`,height:'100%',borderRadius:3,background:'#22c55e'}}/>
         </div>
         <span style={{fontSize:12,fontFamily:'DM Mono',color:'#4ade80'}}>{verifiedPct}% verified</span>
-        <span style={{fontSize:12,color:'#64748b'}}>{totalEntries} total entries</span>
-        <a href="social.html" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>→ จัดการข้อมูล</a>
+        <span style={{fontSize:12,color:'#64748b'}}>{allItems.length} entries</span>
+        <a href="social.html" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>→ จัดการ</a>
       </div>
 
       {/* alerts */}
-      <div style={{marginBottom:16}}>
+      <div style={{marginBottom:14}}>
         <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:8,textTransform:'uppercase',letterSpacing:1}}>⚡ Active Alerts</div>
         <AlertsPanel data={data}/>
       </div>
 
-      {/* 3-stock cards */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:14,marginBottom:20}}>
-        {STOCKS.map(s=><StockCard key={s} stock={s} data={data}/>)}
+      {/* 3 stock cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:14,marginBottom:16}}>
+        {STOCKS.map(s=><StockCard key={s} stock={s} sd={getSD(data,s)}/>)}
       </div>
+
+      {/* sector heatmap */}
+      <SectorHeatmap data={data}/>
 
       {/* comparison bars */}
-      <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'18px 20px',marginBottom:16}}>
-        <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:16}}>เปรียบเทียบ 3 หุ้น</div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}}>
-          <ComparisonBar label="Sentiment Score (−100 → +100)" values={sentiments.map(v=>({...v,max:100,val:v.val+100}))}/>
-          <ComparisonBar label="Traffic Composite (0 → 100)" values={traffics}/>
-        </div>
-      </div>
+      <CompBars data={data}/>
 
-      {/* what to monitor next */}
+      {/* checklist */}
       <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'18px 20px'}}>
         <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:12}}>📋 Daily Monitoring Checklist</div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:8}}>
           {[
-            {icon:'🔥',task:'ตรวจ Promo Alert — โปรใหม่เพิ่ม >25% จาก baseline?',freq:'ทุกวัน'},
-            {icon:'📉',task:'Sentiment <−30 ใน stock ไหน → อ่านต้นเหตุ',freq:'ทุกวัน'},
-            {icon:'👥',task:'อัพเดต Traffic Source ≥ 1 แหล่ง (Google Trends, SimilarWeb)',freq:'ทุกสัปดาห์'},
-            {icon:'💰',task:'บันทึกราคา iPhone/Samsung ล่าสุดจากทุกร้าน',freq:'ทุกสัปดาห์'},
-            {icon:'📰',task:'คัด News ที่ verified ≥ 1 ชิ้น/stock',freq:'ทุกสัปดาห์'},
-            {icon:'✅',task:'กด Verify ข้อมูลที่ตรวจสอบแล้ว → เพิ่ม Data Quality %',freq:'ทุกครั้ง'},
+            {icon:'🔥',task:'Promo Δ ใน Heatmap เป็นสีแดงไหม? (>+25%)',freq:'ทุกวัน'},
+            {icon:'📉',task:'Sentiment <−30? → เปิด Social ดูต้นเหตุ',freq:'ทุกวัน'},
+            {icon:'👥',task:'อัพเดต Traffic Source ≥ 1 แหล่ง',freq:'ทุกสัปดาห์'},
+            {icon:'💰',task:'บันทึกราคา iPhone/Samsung ทุกร้าน',freq:'ทุกสัปดาห์'},
+            {icon:'📰',task:'เพิ่ม News ≥ 1 ชิ้น/stock + verify',freq:'ทุกสัปดาห์'},
+            {icon:'✅',task:'กด Verify → เพิ่ม Verified% ใน Heatmap',freq:'ทุกครั้ง'},
           ].map((item,i)=>(
             <div key={i} style={{background:'#0f172a',borderRadius:8,padding:'10px 12px',display:'flex',gap:10,alignItems:'flex-start'}}>
               <span style={{fontSize:18}}>{item.icon}</span>
@@ -482,7 +506,7 @@ function App(){
       </div>
 
       <div style={{textAlign:'center',color:'#334155',fontSize:11,marginTop:20}}>
-        REDCODE Monitor · อ่านจาก localStorage rc_social_v1 · ข้อมูลเปลี่ยนแปลงใน social.html จะสะท้อนที่นี่ทันที
+        REDCODE Monitor · rc_social_v1 localStorage · ข้อมูลจาก social.html สะท้อนที่นี่ทันที
       </div>
     </div>
   );

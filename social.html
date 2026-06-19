@@ -125,6 +125,28 @@
       }
     }
   };
+
+  // ── OHLC stock price history (SET prices, 14 trading days) ──────────────────
+  // Format: {date, open, high, low, close} — prices in THB
+  var ohlc = function(base,days){
+    var r=[]; var p=base;
+    for(var i=days;i>=1;i--){
+      var d=new Date(); d.setDate(d.getDate()-i);
+      // skip weekends
+      if(d.getDay()===0||d.getDay()===6) continue;
+      var chg=(Math.random()-0.48)*base*0.025;
+      var o=Math.round(p*100)/100;
+      p=Math.round((p+chg)*100)/100;
+      var hi=Math.round(Math.max(o,p)*100+Math.random()*base*0.012*100)/100;
+      var lo=Math.round(Math.min(o,p)*100-Math.random()*base*0.012*100)/100;
+      r.push({id:id(),date:d.toISOString().slice(0,10),open:o,high:hi,low:lo,close:p,verified:true});
+    }
+    return r;
+  };
+  D.stocks.ADVICE.stockPrices = ohlc(5.95, 20);
+  D.stocks.COM7.stockPrices   = ohlc(16.50, 20);
+  D.stocks.JMART.stockPrices  = ohlc(7.30, 20);
+
   try { localStorage.setItem(K, JSON.stringify(D)); } catch(e){}
 })();
 </script>
@@ -1356,6 +1378,201 @@ const ConfigPanel = ({ data, setData, setStock }) => {
   );
 };
 
+// ── Candlestick + Sentiment Overlay ──────────────────────────────────────────
+const CandlestickTab = ({data, stock}) => {
+  const sd = data.stocks?.[stock] || {};
+  const candles = [...(sd.stockPrices||[])].sort((a,b)=>a.date.localeCompare(b.date)).slice(-20);
+  const sentiments = sd.sentiments || [];
+
+  // weekly sentiment score per date bucket
+  const sentByDate = useMemo(()=>{
+    if(!sentiments.length) return {};
+    const CRED={pantip:4,facebook:2,facebook_grp:2,twitter:3,google_rev:4,google_reviews:4,official:5,news:5,news_official:5,tiktok:2,shopee_rev:3};
+    const map={};
+    sentiments.forEach(e=>{
+      const d=e.date; if(!map[d]) map[d]={ws:0,wt:0};
+      const c=CRED[e.source]||2, w=c*Math.max(1,e.feedbackCount||1);
+      const v=e.sentiment==='positive'?1:e.sentiment==='negative'?-1:0;
+      map[d].ws+=v*w; map[d].wt+=w;
+    });
+    return Object.fromEntries(Object.entries(map).map(([d,{ws,wt}])=>[d,Math.round(ws/wt*100)]));
+  },[sentiments]);
+
+  // SVG layout
+  const W=580, H=280;
+  const mL=54, mR=66, mT=16, mB=36;
+  const cW=W-mL-mR, cH=H-mT-mB;
+
+  if(!candles.length) return(
+    <div style={{background:C.bg,borderRadius:12,border:`1px solid ${C.border}`,padding:'40px',textAlign:'center',color:C.muted}}>
+      ยังไม่มีข้อมูลราคาหุ้น (OHLC) — ล้าง localStorage แล้วรีเฟรชเพื่อโหลด demo data ใหม่
+    </div>
+  );
+
+  const n=candles.length;
+  const slot=cW/n;
+  const bW=Math.max(4,Math.floor(slot*0.55));
+
+  const allPrices=candles.flatMap(c=>[c.high,c.low]);
+  const prMin=Math.min(...allPrices), prMax=Math.max(...allPrices);
+  const prPad=(prMax-prMin)*0.08;
+  const yPr=v=>mT+cH-(v-(prMin-prPad))/((prMax+prPad)-(prMin-prPad))*cH;
+  const xC=i=>mL+slot*(i+0.5);
+
+  // sentiment points: for each candle date, find nearest sentiment entry (within 5 days before)
+  const sentPoints=candles.map((c,i)=>{
+    const d=c.date;
+    const relevant=Object.entries(sentByDate).filter(([sd])=>sd<=d).sort(([a],[b])=>b.localeCompare(a));
+    if(!relevant.length) return null;
+    const s=relevant[0][1];
+    const yS=mT+cH-((s+100)/200)*cH;
+    return {x:xC(i),y:yS,score:s,date:d};
+  }).filter(Boolean);
+
+  const sentLine=sentPoints.map(p=>`${p.x},${p.y}`).join(' ');
+  const sentColor='#38bdf8';
+
+  // price Y axis ticks
+  const prTicks=[];
+  const step=Math.pow(10,Math.floor(Math.log10((prMax-prMin)/4)));
+  const tickStart=Math.ceil((prMin-prPad)/step)*step;
+  for(let v=tickStart;v<=prMax+prPad;v+=step){
+    if(v<prMin-prPad||v>prMax+prPad) continue;
+    prTicks.push({v,y:yPr(v)});
+  }
+
+  // date axis: show every 3rd candle
+  const dateTicks=candles.filter((_,i)=>i%3===0).map((c,_,arr)=>{
+    const i=candles.indexOf(c);
+    const d=new Date(c.date+'T00:00:00');
+    return {x:xC(i),label:`${d.getDate()}/${d.getMonth()+1}`};
+  });
+
+  const stockColor=C.indigo;
+
+  return(
+    <div style={{animation:'fadeUp .3s ease'}}>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
+        <div>
+          <div style={{fontSize:17,fontWeight:800,color:C.text}}>🕯️ Candlestick + Sentiment Overlay — {stock}</div>
+          <div style={{fontSize:12,color:C.muted}}>ราคาหุ้น (OHLC) ซ้อนทับ Sentiment Score · {n} trading days</div>
+        </div>
+        <div style={{marginLeft:'auto',display:'flex',gap:14,fontSize:12,flexWrap:'wrap'}}>
+          <span style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{width:12,height:12,background:'#22c55e',display:'inline-block',borderRadius:1}}/>
+            <span style={{color:C.sub}}>ขึ้น (close&gt;open)</span>
+          </span>
+          <span style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{width:12,height:12,background:'#ef4444',display:'inline-block',borderRadius:1}}/>
+            <span style={{color:C.sub}}>ลง (close&lt;open)</span>
+          </span>
+          <span style={{display:'flex',alignItems:'center',gap:5}}>
+            <svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke={sentColor} strokeWidth="2" strokeDasharray="4,2"/></svg>
+            <span style={{color:C.sub}}>Sentiment score</span>
+          </span>
+        </div>
+      </div>
+
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:'16px 8px 8px',overflow:'hidden'}}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',maxWidth:W,display:'block',margin:'0 auto'}}>
+
+          {/* grid */}
+          {prTicks.map((t,i)=>(
+            <g key={i}>
+              <line x1={mL} y1={t.y} x2={W-mR} y2={t.y} stroke={C.border} strokeWidth="0.6" strokeDasharray="4,3"/>
+              <text x={mL-5} y={t.y+4} textAnchor="end" fontSize="10" fill={C.muted} fontFamily="DM Mono,monospace">{t.v.toFixed(2)}</text>
+            </g>
+          ))}
+
+          {/* sentiment right axis labels */}
+          {[-100,-50,0,50,100].map(v=>{
+            const y=mT+cH-((v+100)/200)*cH;
+            return(
+              <g key={v}>
+                <line x1={W-mR} y1={y} x2={W-mR+4} y2={y} stroke={sentColor} strokeWidth="0.7"/>
+                <text x={W-mR+7} y={y+4} fontSize="9" fill={sentColor} fontFamily="DM Mono,monospace" opacity="0.8">
+                  {v>0?`+${v}`:v}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* sentiment zero line */}
+          <line x1={mL} y1={mT+cH*0.5} x2={W-mR} y2={mT+cH*0.5} stroke={sentColor} strokeWidth="0.5" strokeDasharray="2,4" opacity="0.3"/>
+
+          {/* date axis */}
+          {dateTicks.map((t,i)=>(
+            <text key={i} x={t.x} y={H-mB+16} textAnchor="middle" fontSize="9.5" fill={C.muted} fontFamily="DM Sans,sans-serif">{t.label}</text>
+          ))}
+
+          {/* axes */}
+          <line x1={mL} y1={mT} x2={mL} y2={mT+cH} stroke="#334155" strokeWidth="1"/>
+          <line x1={mL} y1={mT+cH} x2={W-mR} y2={mT+cH} stroke="#334155" strokeWidth="1"/>
+          <line x1={W-mR} y1={mT} x2={W-mR} y2={mT+cH} stroke={sentColor} strokeWidth="1" opacity="0.5"/>
+
+          {/* candlesticks */}
+          {candles.map((c,i)=>{
+            const up=c.close>=c.open;
+            const fill=up?'#22c55e':'#ef4444';
+            const cx=xC(i);
+            const yO=yPr(c.open), yC=yPr(c.close), yH=yPr(c.high), yL=yPr(c.low);
+            const bTop=Math.min(yO,yC), bBot=Math.max(yO,yC), bHt=Math.max(1,bBot-bTop);
+            return(
+              <g key={c.id||i}>
+                {/* wick */}
+                <line x1={cx} y1={yH} x2={cx} y2={yL} stroke={fill} strokeWidth="1.5"/>
+                {/* body */}
+                <rect x={cx-bW/2} y={bTop} width={bW} height={bHt} fill={fill} opacity={up?0.85:0.9}/>
+                {!c.verified&&<rect x={cx-bW/2} y={bTop} width={bW} height={bHt} fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="2,2"/>}
+              </g>
+            );
+          })}
+
+          {/* sentiment overlay line */}
+          {sentPoints.length>=2&&(
+            <polyline points={sentLine} fill="none" stroke={sentColor} strokeWidth="2" strokeDasharray="5,3" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+          )}
+          {sentPoints.map((p,i)=>(
+            <g key={i}>
+              <circle cx={p.x} cy={p.y} r="4" fill={sentColor} opacity="0.9"/>
+              <text x={p.x} y={p.y-7} textAnchor="middle" fontSize="9" fill={sentColor} fontFamily="DM Mono,monospace">{p.score>0?`+${p.score}`:p.score}</text>
+            </g>
+          ))}
+
+          {/* axis labels */}
+          <text x={mL-40} y={mT+cH/2} textAnchor="middle" fontSize="10" fill={C.muted} fontFamily="DM Sans,sans-serif" transform={`rotate(-90,${mL-40},${mT+cH/2})`}>ราคา (THB)</text>
+          <text x={W-mR+50} y={mT+cH/2} textAnchor="middle" fontSize="10" fill={sentColor} fontFamily="DM Sans,sans-serif" transform={`rotate(90,${W-mR+50},${mT+cH/2})`} opacity="0.8">Sentiment</text>
+        </svg>
+      </div>
+
+      {/* stats row */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10,marginTop:12}}>
+        {(()=>{
+          const last=candles[candles.length-1];
+          const first=candles[0];
+          const chg=last&&first? ((last.close-first.close)/first.close*100) : null;
+          const latestSent=sentPoints.length?sentPoints[sentPoints.length-1].score:null;
+          return [
+            {label:'ราคาปิดล่าสุด', val:`฿${last?.close?.toFixed(2)??'—'}`, color:C.text},
+            {label:`เปลี่ยนแปลง ${n} วัน`, val:chg!==null?`${chg>=0?'+':''}${chg.toFixed(2)}%`:'—', color:chg>=0?'#059669':'#dc2626'},
+            {label:'High/Low', val:`฿${Math.max(...candles.map(c=>c.high)).toFixed(2)} / ฿${Math.min(...candles.map(c=>c.low)).toFixed(2)}`, color:C.sub},
+            {label:'Sentiment ล่าสุด', val:latestSent!==null?(latestSent>0?`+${latestSent}`:latestSent):'—', color:latestSent!==null?(latestSent>=20?'#059669':latestSent<=-20?'#dc2626':'#d97706'):C.muted},
+          ];
+        })().map((s,i)=>(
+          <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:'12px 14px'}}>
+            <div style={{fontSize:11,color:C.muted,marginBottom:3}}>{s.label}</div>
+            <div style={{fontFamily:'DM Mono',fontWeight:700,fontSize:15,color:s.color}}>{s.val}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{fontSize:11,color:C.muted,marginTop:10,lineHeight:1.6}}>
+        💡 <b>วิธีอ่าน:</b> แท่งเขียว = ราคาปิดสูงกว่าเปิด · แท่งแดง = ปิดต่ำกว่าเปิด · เส้นประฟ้า = Sentiment score (แกนขวา −100 ถึง +100) · เส้นประบนแท่ง = ข้อมูลยังไม่ verified
+      </div>
+    </div>
+  );
+};
+
 // ── App ───────────────────────────────────────────────────────────────────────
 const TABS=[
   {id:'overview', label:'ภาพรวม',    icon:'📊'},
@@ -1363,6 +1580,7 @@ const TABS=[
   {id:'sentiment',label:'Sentiment',  icon:'💬'},
   {id:'news',     label:'ข่าวสาร',   icon:'📰'},
   {id:'traffic',  label:'Traffic',    icon:'📈'},
+  {id:'chart',    label:'Chart',      icon:'🕯️'},
 ];
 
 const App = () => {
@@ -1430,6 +1648,7 @@ const App = () => {
         {tab==='sentiment' &&<SentimentTab data={data} setData={setData} stock={stock}/>}
         {tab==='news'      &&<NewsTab      data={data} setData={setData} stock={stock}/>}
         {tab==='traffic'   &&<TrafficTab   data={data} setData={setData} stock={stock}/>}
+        {tab==='chart'     &&<CandlestickTab data={data} stock={stock}/>}
       </div>
     </div>
   );
