@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>REDCODE Portfolio Dashboard</title>
+  <title>SJ Company — Unified Finance Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.2/babel.min.js"></script>
@@ -34,7 +34,18 @@ const { useState, useEffect, useRef, useCallback } = React;
 // ═══════════════════════════════════════════════════
 //  DATA
 // ═══════════════════════════════════════════════════
-const _HARDCODED_PORTS = [];
+const _HARDCODED_PORTS = [
+  { id:"pi", label:"พอร์ตหุ้น SJ", broker:"Pi", color:"#f97316", cash:0, holdings:[
+    { symbol:"DOHOME",  shares:435618,  avgCost:3.38,  sector:"Commerce",  pe_core:18, pe_fair:22, eps_worst:0, eps_3y:0, div:0, targetPct:0.28 },
+    { symbol:"SGC",     shares:1030500, avgCost:1.36,  sector:"Finance",   pe_core:8,  pe_fair:10, eps_worst:0, eps_3y:0, div:0, targetPct:0.27 },
+    { symbol:"PR9",     shares:31800,   avgCost:16.80, sector:"Healthcare",pe_core:25, pe_fair:30, eps_worst:0, eps_3y:0, div:0, targetPct:0.10 },
+    { symbol:"JMT",     shares:46234,   avgCost:10.90, sector:"Finance",   pe_core:12, pe_fair:15, eps_worst:0, eps_3y:0, div:0, targetPct:0.10 },
+    { symbol:"JMART",   shares:52104,   avgCost:8.85,  sector:"Commerce",  pe_core:12, pe_fair:15, eps_worst:0, eps_3y:0, div:0, targetPct:0.09 },
+    { symbol:"WASH",    shares:107200,  avgCost:4.08,  sector:"Service",   pe_core:14, pe_fair:18, eps_worst:0, eps_3y:0, div:0, targetPct:0.08 },
+    { symbol:"CHAYO",   shares:280973,  avgCost:1.27,  sector:"Finance",   pe_core:10, pe_fair:13, eps_worst:0, eps_3y:0, div:0, targetPct:0.07 },
+    { symbol:"SGC-W2",  shares:112800,  avgCost:0.32,  sector:"Warrant",   pe_core:0,  pe_fair:0,  eps_worst:0, eps_3y:0, div:0, targetPct:0.01 },
+  ]},
+];
 // โหลดจาก localStorage ก่อน ถ้าไม่มีให้ใช้ hardcoded แล้ว save ไว้
 const INIT_PORTS = (() => {
   try {
@@ -45,7 +56,7 @@ const INIT_PORTS = (() => {
   } catch { return _HARDCODED_PORTS; }
 })();
 // fallback hardcode (ใช้เมื่อ prices.js ไม่มีหรือไม่มีราคา)
-const _FALLBACK = { ADVICE:5.95, DOHOME:3.40, PR9:16.30, WASH:4.50, SGC:0.94, "SGC-W2":0.24, CHAYO:1.05, JMART:7.30, JMT:10.00 };
+const _FALLBACK = { DOHOME:3.38, SGC:1.36, PR9:16.80, JMT:10.90, JMART:8.85, WASH:4.08, CHAYO:1.27, "SGC-W2":0.32 };
 // merge prices.js (ถ้ามี) — ข้าม null ให้ใช้ fallback
 const _lp = (typeof window!=="undefined")&&window.LATEST_PRICES;
 const INIT_PRICES = Object.fromEntries(Object.entries(_FALLBACK).map(([k,v])=>[k,(_lp?.stocks?.[k])??v]));
@@ -388,6 +399,365 @@ function SetupWizard() {
 }
 
 // ═══════════════════════════════════════════════════
+//  SJ COMPANY — Unified Finance (funds / income / expense / cards)
+// ═══════════════════════════════════════════════════
+const SJ_LS = "sj_finance_v1";
+const sjLoad = () => { try { const r=localStorage.getItem(SJ_LS); return r?JSON.parse(r):null; } catch { return null; } };
+const sjSave = d => { try { localStorage.setItem(SJ_LS, JSON.stringify(d)); } catch {} };
+
+// ── กองทุนลดหย่อนภาษี (seed จากรูปจริง) ──
+const FUND_CATS = ["SSF","ThaiESG","RMF","SSFX"];
+const FUND_CAT_COLOR = { SSF:"#6366f1", ThaiESG:"#10b981", RMF:"#f59e0b", SSFX:"#06b6d4" };
+const SJ_FUNDS_SEED = [
+  // SSF — มูลค่ารวม 1,008,022.40 / ต้นทุน 980,000
+  { id:"f1", cat:"SSF",     name:"KFVIETSSF",      value:468779.39, cost:447042.08, units:49814.5037 },
+  { id:"f2", cat:"SSF",     name:"KFUSSSF",        value:291754.70, cost:186000.00, units:50466.9868 },
+  { id:"f3", cat:"SSF",     name:"SSF อื่นๆ",       value:247488.31, cost:346957.92, units:0 },
+  // ThaiESG — มูลค่ารวม 461,379.50 / ต้นทุน 389,000 (+72,379.50 / +18.61%)
+  { id:"f4", cat:"ThaiESG", name:"ThaiESG (รวม: KFTHAIESGD + KFGBTHAIESG-A)", value:461379.50, cost:389000.00, units:0 },
+  // RMF — มูลค่ารวม 294,232.00 / ต้นทุน 259,000.01
+  { id:"f5", cat:"RMF",     name:"KF-GCHINARMF",   value:158848.42, cost:155000.00, units:13146.5473 },
+  { id:"f6", cat:"RMF",     name:"KFUSINDFXRMF",   value:88654.67,  cost:65460.58,  units:6973.4346 },
+  { id:"f7", cat:"RMF",     name:"KFGGRMF",        value:46728.91,  cost:38539.43,  units:6178.0496 },
+  // SSFX — มูลค่ารวม 23,724.23 / ต้นทุน 20,000
+  { id:"f8", cat:"SSFX",    name:"KFS100SSFX",     value:23724.23,  cost:20000.00,  units:1861.5560 },
+];
+// ยอดซื้อรายปีภาษี (seed จากรูป)
+const SJ_FUNDBUYS_SEED = [
+  { id:"b1", year:"2569", cat:"ThaiESG", fund:"KFGBTHAIESG-A", amount:60000 },
+  { id:"b2", year:"2569", cat:"RMF",     fund:"KFUSINDFXRMF",  amount:3000 },
+  { id:"b3", year:"2568", cat:"ThaiESG", fund:"KFTHAIESGD",    amount:200000 },
+  { id:"b4", year:"2568", cat:"ThaiESG", fund:"KFGBTHAIESG-A", amount:29000 },
+  { id:"b5", year:"2568", cat:"RMF",     fund:"KFGGRMF",       amount:12000 },
+];
+// รายรับ / รายจ่าย / บัตรเครดิต (seed ตัวอย่าง — แก้ไขได้)
+const SJ_INCOME_SEED = [
+  { id:"i1", type:"salary",   name:"เงินเดือน",          amount:0, freq:"monthly", note:"" },
+  { id:"i2", type:"dividend", name:"เงินปันผลหุ้น/กองทุน", amount:0, freq:"yearly",  note:"" },
+];
+const SJ_EXPENSE_SEED = [
+  { id:"e1", name:"ค่าผ่อนบ้าน/ค่าเช่า", amount:0, cat:"ที่อยู่อาศัย", freq:"monthly" },
+  { id:"e2", name:"ค่าน้ำ/ไฟ/เน็ต",     amount:0, cat:"สาธารณูปโภค", freq:"monthly" },
+  { id:"e3", name:"ค่ากิน/ใช้จ่ายทั่วไป", amount:0, cat:"ทั่วไป",      freq:"monthly" },
+];
+const SJ_CARDS_SEED = [
+  { id:"c1", name:"บัตรเครดิต 1", limit:0, balance:0, due:"", note:"" },
+];
+const SJ_DEFAULT = { funds:SJ_FUNDS_SEED, fundBuys:SJ_FUNDBUYS_SEED, income:SJ_INCOME_SEED, expenses:SJ_EXPENSE_SEED, cards:SJ_CARDS_SEED };
+
+// แปลงทุกความถี่เป็นยอด "ต่อเดือน" สำหรับสรุป cashflow
+const toMonthly = (amount, freq) => { const a=+amount||0; if(freq==="yearly")return a/12; if(freq==="weekly")return a*52/12; if(freq==="daily")return a*30; return a; };
+
+// ── styling สำหรับโมดูล SJ (module scope) ──
+const SC = { bg:"#f8fafc", card:"#ffffff", border:"#e2e8f0", muted:"#94a3b8", text:"#1e293b", sub:"#64748b", up:"#16a34a", dn:"#dc2626" };
+const sjShadow = "0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04)";
+const sjCard = { background:SC.card, border:`1px solid ${SC.border}`, borderRadius:14, padding:16, boxShadow:sjShadow };
+const sjInp  = { background:"#f8fafc", border:`1px solid ${SC.border}`, borderRadius:8, color:SC.text, padding:"8px 10px", fontSize:13, fontFamily:"'DM Mono',monospace", outline:"none", width:"100%" };
+const sjBtn  = bg => ({ background:bg, color:"#fff", border:"none", borderRadius:8, padding:"8px 14px", cursor:"pointer", fontWeight:600, fontSize:12, fontFamily:"inherit" });
+const sjDel  = { background:"none", border:"1px solid #fecaca", color:"#dc2626", borderRadius:6, padding:"3px 9px", fontSize:11, cursor:"pointer", fontFamily:"inherit", flexShrink:0 };
+const SectionTitle = ({icon,title,sub}) => (
+  <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:12}}>
+    <span style={{fontSize:18}}>{icon}</span>
+    <span style={{fontWeight:800,fontSize:16,color:SC.text}}>{title}</span>
+    {sub&&<span style={{fontSize:12,color:SC.muted}}>{sub}</span>}
+  </div>
+);
+
+// ── KPI mini card ──
+function StatCard({lbl,val,sub,acc,clr,icon}) {
+  return (
+    <div style={{...sjCard,position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:0,left:0,width:4,height:"100%",background:acc}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:12,color:SC.sub,fontWeight:600}}>{lbl}</span><span style={{fontSize:16}}>{icon}</span>
+      </div>
+      <div style={{fontSize:22,fontWeight:800,marginTop:6,color:clr||SC.text,fontFamily:"'DM Mono',monospace"}}>{val}</div>
+      {sub&&<div style={{fontSize:12,color:clr||SC.muted,marginTop:2}}>{sub}</div>}
+    </div>
+  );
+}
+
+// ═══════════════ FUNDS VIEW ═══════════════
+function FundsView({ funds, setFunds, fundBuys, setFundBuys }) {
+  const [adding,setAdding]=useState(false);
+  const [form,setForm]=useState({cat:"SSF",name:"",value:"",cost:"",units:""});
+  const [buyForm,setBuyForm]=useState({year:"2569",cat:"ThaiESG",fund:"",amount:""});
+  const [buyAdding,setBuyAdding]=useState(false);
+
+  const totalValue=funds.reduce((a,f)=>a+(+f.value||0),0);
+  const totalCost =funds.reduce((a,f)=>a+(+f.cost||0),0);
+  const gain=totalValue-totalCost, gainPct=totalCost>0?gain/totalCost*100:0;
+  const byCat=FUND_CATS.map(c=>({ name:c, value:funds.filter(f=>f.cat===c).reduce((a,f)=>a+(+f.value||0),0) })).filter(d=>d.value>0);
+
+  const addFund=()=>{ if(!form.name)return; setFunds(p=>[...p,{id:"f"+Date.now(),cat:form.cat,name:form.name,value:+form.value||0,cost:+form.cost||0,units:+form.units||0}]); setForm({cat:"SSF",name:"",value:"",cost:"",units:""}); setAdding(false); };
+  const delFund=id=>setFunds(p=>p.filter(f=>f.id!==id));
+  const editFund=(id,k,v)=>setFunds(p=>p.map(f=>f.id!==id?f:{...f,[k]:(k==="name"||k==="cat")?v:(+v||0)}));
+  const addBuy=()=>{ if(!buyForm.amount)return; setFundBuys(p=>[{id:"b"+Date.now(),...buyForm,amount:+buyForm.amount||0},...p]); setBuyForm({year:"2569",cat:"ThaiESG",fund:"",amount:""}); setBuyAdding(false); };
+  const delBuy=id=>setFundBuys(p=>p.filter(b=>b.id!==id));
+
+  const buyYears=[...new Set(fundBuys.map(b=>b.year))].sort().reverse();
+
+  return (
+    <>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:16}}>
+        <StatCard lbl="มูลค่ากองทุนรวม" val={fmtK(totalValue)} sub={`ต้นทุน ${fmtK(totalCost)}`} acc="#6366f1" icon="🏦"/>
+        <StatCard lbl="กำไร/ขาดทุน" val={`${gain>=0?"+":""}${fmtK(Math.abs(gain))}`} sub={`${gain>=0?"+":""}${fmt(gainPct,2)}%`} acc={gain>=0?SC.up:SC.dn} clr={gain>=0?SC.up:SC.dn} icon={gain>=0?"📈":"📉"}/>
+        <StatCard lbl="จำนวนกองทุน" val={String(funds.length)} sub={`${byCat.length} ประเภท`} acc="#0ea5e9" icon="📦"/>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"minmax(220px,300px) 1fr",gap:16,marginBottom:16,alignItems:"start"}}>
+        <div style={{...sjCard}}>
+          <SectionTitle icon="🍩" title="สัดส่วนตามประเภท"/>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:10}}>
+            <PieChartSVG data={byCat} size={150} innerR={48} outerR={70}/>
+          </div>
+          {byCat.map((d,i)=>{ const p=totalValue>0?d.value/totalValue*100:0; return (
+            <div key={d.name} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:13}}>
+              <span style={{width:10,height:10,borderRadius:3,background:FUND_CAT_COLOR[d.name]||COLORS[i],flexShrink:0}}/>
+              <span style={{flex:1,fontWeight:600}}>{d.name}</span>
+              <span style={{fontFamily:"'DM Mono',monospace"}}>{fmt(p,2)}%</span>
+            </div>
+          );})}
+        </div>
+
+        <div style={{...sjCard}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <SectionTitle icon="🏦" title="กองทุนลดหย่อนภาษี"/>
+            <button onClick={()=>setAdding(v=>!v)} style={sjBtn(adding?"#94a3b8":"#6366f1")}>{adding?"ยกเลิก":"+ เพิ่มกองทุน"}</button>
+          </div>
+          {adding&&(
+            <div style={{display:"grid",gridTemplateColumns:"90px 1fr 110px 110px 100px auto",gap:6,marginBottom:10,alignItems:"center"}}>
+              <select value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))} style={sjInp}>{FUND_CATS.map(c=><option key={c}>{c}</option>)}</select>
+              <input placeholder="ชื่อกองทุน" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
+              <input placeholder="มูลค่า" value={form.value} onChange={e=>setForm(f=>({...f,value:e.target.value}))} style={sjInp}/>
+              <input placeholder="ต้นทุน" value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} style={sjInp}/>
+              <input placeholder="หน่วย" value={form.units} onChange={e=>setForm(f=>({...f,units:e.target.value}))} style={sjInp}/>
+              <button onClick={addFund} style={sjBtn("#16a34a")}>เพิ่ม</button>
+            </div>
+          )}
+          {FUND_CATS.filter(c=>funds.some(f=>f.cat===c)).map(cat=>{
+            const list=funds.filter(f=>f.cat===cat); const cv=list.reduce((a,f)=>a+(+f.value||0),0); const cc=list.reduce((a,f)=>a+(+f.cost||0),0); const cg=cv-cc;
+            return (
+              <div key={cat} style={{marginBottom:12}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,borderBottom:`2px solid ${FUND_CAT_COLOR[cat]}`,paddingBottom:4,marginBottom:6}}>
+                  <span style={{width:10,height:10,borderRadius:3,background:FUND_CAT_COLOR[cat]}}/>
+                  <span style={{fontWeight:800,fontSize:14}}>{cat}</span>
+                  <span style={{marginLeft:"auto",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmt(cv)} ฿</span>
+                  <span style={{fontSize:12,color:cg>=0?SC.up:SC.dn,fontFamily:"'DM Mono',monospace"}}>{cg>=0?"+":""}{fmt(cg)}</span>
+                </div>
+                {list.map(f=>{ const g=(+f.value||0)-(+f.cost||0); const gp=(+f.cost||0)>0?g/f.cost*100:0; return (
+                  <div key={f.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 130px 90px auto",gap:8,alignItems:"center",padding:"5px 4px",fontSize:13}}>
+                    <input value={f.name} onChange={e=>editFund(f.id,"name",e.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontFamily:"inherit",fontWeight:600}}/>
+                    <input value={f.value} onChange={e=>editFund(f.id,"value",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
+                    <span style={{textAlign:"right",fontSize:12,color:g>=0?SC.up:SC.dn,fontFamily:"'DM Mono',monospace"}}>{g>=0?"+":""}{fmt(gp,1)}%</span>
+                    <button onClick={()=>delFund(f.id)} style={sjDel}>ลบ</button>
+                  </div>
+                );})}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ยอดซื้อรายปีภาษี */}
+      <div style={{...sjCard}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <SectionTitle icon="🧾" title="ยอดซื้อรายปีภาษี" sub="สำหรับลดหย่อน"/>
+          <button onClick={()=>setBuyAdding(v=>!v)} style={sjBtn(buyAdding?"#94a3b8":"#6366f1")}>{buyAdding?"ยกเลิก":"+ เพิ่มยอดซื้อ"}</button>
+        </div>
+        {buyAdding&&(
+          <div style={{display:"grid",gridTemplateColumns:"90px 110px 1fr 120px auto",gap:6,marginBottom:10}}>
+            <input placeholder="ปี (พ.ศ.)" value={buyForm.year} onChange={e=>setBuyForm(f=>({...f,year:e.target.value}))} style={sjInp}/>
+            <select value={buyForm.cat} onChange={e=>setBuyForm(f=>({...f,cat:e.target.value}))} style={sjInp}>{FUND_CATS.map(c=><option key={c}>{c}</option>)}</select>
+            <input placeholder="ชื่อกองทุน" value={buyForm.fund} onChange={e=>setBuyForm(f=>({...f,fund:e.target.value}))} style={sjInp}/>
+            <input placeholder="ยอดซื้อ" value={buyForm.amount} onChange={e=>setBuyForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
+            <button onClick={addBuy} style={sjBtn("#16a34a")}>เพิ่ม</button>
+          </div>
+        )}
+        {buyYears.map(y=>{ const list=fundBuys.filter(b=>b.year===y); const sum=list.reduce((a,b)=>a+(+b.amount||0),0); return (
+          <div key={y} style={{marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+              <span style={{fontWeight:800,fontSize:14,background:"#fef3c7",color:"#b45309",borderRadius:6,padding:"2px 10px"}}>ปี {y}</span>
+              <span style={{marginLeft:"auto",fontFamily:"'DM Mono',monospace",fontWeight:700}}>รวม {fmt(sum)} ฿</span>
+            </div>
+            {list.map(b=>(
+              <div key={b.id} className="rh" style={{display:"grid",gridTemplateColumns:"80px 1fr 120px auto",gap:8,alignItems:"center",padding:"4px",fontSize:13}}>
+                <span style={{fontWeight:700,color:FUND_CAT_COLOR[b.cat]}}>{b.cat}</span>
+                <span>{b.fund}</span>
+                <span style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{fmt(b.amount)} ฿</span>
+                <button onClick={()=>delBuy(b.id)} style={sjDel}>ลบ</button>
+              </div>
+            ))}
+          </div>
+        );})}
+      </div>
+    </>
+  );
+}
+
+// ═══════════════ CASHFLOW (รายรับ-รายจ่าย) ═══════════════
+function CashflowView({ income, setIncome, expenses, setExpenses }) {
+  const [incForm,setIncForm]=useState({type:"salary",name:"",amount:"",freq:"monthly",note:""});
+  const [expForm,setExpForm]=useState({name:"",amount:"",cat:"ทั่วไป",freq:"monthly"});
+  const [incAdd,setIncAdd]=useState(false);
+  const [expAdd,setExpAdd]=useState(false);
+
+  const incMonthly=income.reduce((a,i)=>a+toMonthly(i.amount,i.freq),0);
+  const expMonthly=expenses.reduce((a,e)=>a+toMonthly(e.amount,e.freq),0);
+  const net=incMonthly-expMonthly;
+
+  const addInc=()=>{ if(!incForm.name)return; setIncome(p=>[...p,{id:"i"+Date.now(),...incForm,amount:+incForm.amount||0}]); setIncForm({type:"salary",name:"",amount:"",freq:"monthly",note:""}); setIncAdd(false); };
+  const addExp=()=>{ if(!expForm.name)return; setExpenses(p=>[...p,{id:"e"+Date.now(),...expForm,amount:+expForm.amount||0}]); setExpForm({name:"",amount:"",cat:"ทั่วไป",freq:"monthly"}); setExpAdd(false); };
+  const editInc=(id,k,v)=>setIncome(p=>p.map(i=>i.id!==id?i:{...i,[k]:(k==="amount")?(+v||0):v}));
+  const editExp=(id,k,v)=>setExpenses(p=>p.map(e=>e.id!==id?e:{...e,[k]:(k==="amount")?(+v||0):v}));
+  const delInc=id=>setIncome(p=>p.filter(i=>i.id!==id));
+  const delExp=id=>setExpenses(p=>p.filter(e=>e.id!==id));
+
+  const freqLbl={monthly:"/เดือน",yearly:"/ปี",weekly:"/สัปดาห์",daily:"/วัน"};
+  const FreqSel=({v,on})=><select value={v} onChange={e=>on(e.target.value)} style={{...sjInp,padding:"6px 4px"}}><option value="monthly">รายเดือน</option><option value="yearly">รายปี</option><option value="weekly">รายสัปดาห์</option><option value="daily">รายวัน</option></select>;
+
+  return (
+    <>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:16}}>
+        <StatCard lbl="รายรับ/เดือน" val={fmtK(incMonthly)} sub="รวมทุกแหล่ง (แปลงเป็นต่อเดือน)" acc={SC.up} clr={SC.up} icon="💰"/>
+        <StatCard lbl="รายจ่าย/เดือน" val={fmtK(expMonthly)} sub="รวมทุกหมวด" acc={SC.dn} clr={SC.dn} icon="💸"/>
+        <StatCard lbl="คงเหลือ/เดือน" val={`${net>=0?"+":""}${fmtK(Math.abs(net))}`} sub={incMonthly>0?`เก็บได้ ${fmt(net/incMonthly*100,1)}% ของรายรับ`:"—"} acc={net>=0?SC.up:SC.dn} clr={net>=0?SC.up:SC.dn} icon={net>=0?"🟢":"🔴"}/>
+        <StatCard lbl="ประมาณการ/ปี" val={`${net>=0?"+":""}${fmtK(Math.abs(net*12))}`} sub="คงเหลือสุทธิทั้งปี" acc="#6366f1" clr={net>=0?SC.up:SC.dn} icon="📅"/>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        {/* รายรับ */}
+        <div style={{...sjCard}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <SectionTitle icon="💰" title="รายรับ" sub="เงินเดือน · ปันผล · อื่นๆ"/>
+            <button onClick={()=>setIncAdd(v=>!v)} style={sjBtn(incAdd?"#94a3b8":"#16a34a")}>{incAdd?"ยกเลิก":"+ เพิ่ม"}</button>
+          </div>
+          {incAdd&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6,marginBottom:10}}>
+              <div style={{display:"grid",gridTemplateColumns:"110px 1fr",gap:6}}>
+                <select value={incForm.type} onChange={e=>setIncForm(f=>({...f,type:e.target.value}))} style={sjInp}><option value="salary">เงินเดือน</option><option value="dividend">เงินปันผล</option><option value="bonus">โบนัส</option><option value="other">อื่นๆ</option></select>
+                <input placeholder="ชื่อรายการ" value={incForm.name} onChange={e=>setIncForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 130px auto",gap:6}}>
+                <input placeholder="จำนวนเงิน" value={incForm.amount} onChange={e=>setIncForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
+                <FreqSel v={incForm.freq} on={v=>setIncForm(f=>({...f,freq:v}))}/>
+                <button onClick={addInc} style={sjBtn("#16a34a")}>เพิ่ม</button>
+              </div>
+            </div>
+          )}
+          {income.map(i=>(
+            <div key={i.id} className="rh" style={{display:"grid",gridTemplateColumns:"22px 1fr 120px 110px auto",gap:6,alignItems:"center",padding:"5px 4px",fontSize:13}}>
+              <span style={{fontSize:15}}>{i.type==="salary"?"💵":i.type==="dividend"?"🪙":i.type==="bonus"?"🎁":"➕"}</span>
+              <input value={i.name} onChange={e=>editInc(i.id,"name",e.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
+              <input value={i.amount} onChange={e=>editInc(i.id,"amount",e.target.value)} style={{...sjInp,textAlign:"right"}}/>
+              <FreqSel v={i.freq} on={v=>editInc(i.id,"freq",v)}/>
+              <button onClick={()=>delInc(i.id)} style={sjDel}>ลบ</button>
+            </div>
+          ))}
+        </div>
+
+        {/* รายจ่าย */}
+        <div style={{...sjCard}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <SectionTitle icon="💸" title="รายจ่ายรายเดือน" sub="ค่าใช้จ่ายประจำ"/>
+            <button onClick={()=>setExpAdd(v=>!v)} style={sjBtn(expAdd?"#94a3b8":"#dc2626")}>{expAdd?"ยกเลิก":"+ เพิ่ม"}</button>
+          </div>
+          {expAdd&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6,marginBottom:10}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 130px",gap:6}}>
+                <input placeholder="ชื่อรายการ" value={expForm.name} onChange={e=>setExpForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
+                <input placeholder="หมวด" value={expForm.cat} onChange={e=>setExpForm(f=>({...f,cat:e.target.value}))} style={sjInp}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 130px auto",gap:6}}>
+                <input placeholder="จำนวนเงิน" value={expForm.amount} onChange={e=>setExpForm(f=>({...f,amount:e.target.value}))} style={sjInp}/>
+                <FreqSel v={expForm.freq} on={v=>setExpForm(f=>({...f,freq:v}))}/>
+                <button onClick={addExp} style={sjBtn("#dc2626")}>เพิ่ม</button>
+              </div>
+            </div>
+          )}
+          {expenses.map(e=>(
+            <div key={e.id} className="rh" style={{display:"grid",gridTemplateColumns:"1fr 90px 120px 110px auto",gap:6,alignItems:"center",padding:"5px 4px",fontSize:13}}>
+              <input value={e.name} onChange={ev=>editExp(e.id,"name",ev.target.value)} style={{...sjInp,border:"1px solid transparent",background:"transparent",fontWeight:600}}/>
+              <input value={e.cat} onChange={ev=>editExp(e.id,"cat",ev.target.value)} style={{...sjInp,fontSize:11,color:SC.sub}}/>
+              <input value={e.amount} onChange={ev=>editExp(e.id,"amount",ev.target.value)} style={{...sjInp,textAlign:"right"}}/>
+              <FreqSel v={e.freq} on={v=>editExp(e.id,"freq",v)}/>
+              <button onClick={()=>delExp(e.id)} style={sjDel}>ลบ</button>
+            </div>
+          ))}
+          <div style={{marginTop:8,fontSize:11,color:SC.muted}}>* ระบบแปลงทุกความถี่เป็นยอดต่อเดือนอัตโนมัติเพื่อสรุป cashflow</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ═══════════════ CREDIT CARDS ═══════════════
+function CardsView({ cards, setCards }) {
+  const [adding,setAdding]=useState(false);
+  const [form,setForm]=useState({name:"",limit:"",balance:"",due:"",note:""});
+  const totalBal=cards.reduce((a,c)=>a+(+c.balance||0),0);
+  const totalLimit=cards.reduce((a,c)=>a+(+c.limit||0),0);
+  const util=totalLimit>0?totalBal/totalLimit*100:0;
+  const addCard=()=>{ if(!form.name)return; setCards(p=>[...p,{id:"c"+Date.now(),name:form.name,limit:+form.limit||0,balance:+form.balance||0,due:form.due,note:form.note}]); setForm({name:"",limit:"",balance:"",due:"",note:""}); setAdding(false); };
+  const editCard=(id,k,v)=>setCards(p=>p.map(c=>c.id!==id?c:{...c,[k]:(k==="name"||k==="due"||k==="note")?v:(+v||0)}));
+  const delCard=id=>setCards(p=>p.filter(c=>c.id!==id));
+
+  return (
+    <>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:16}}>
+        <StatCard lbl="ยอดค้างชำระรวม" val={fmtK(totalBal)} sub={`${cards.length} ใบ`} acc={SC.dn} clr={totalBal>0?SC.dn:SC.text} icon="💳"/>
+        <StatCard lbl="วงเงินรวม" val={fmtK(totalLimit)} sub={`เหลือ ${fmtK(totalLimit-totalBal)}`} acc="#6366f1" icon="🏧"/>
+        <StatCard lbl="การใช้วงเงิน" val={`${fmt(util,1)}%`} sub={util>50?"⚠️ ใช้เกินครึ่ง":"อยู่ในเกณฑ์ดี"} acc={util>50?SC.dn:SC.up} clr={util>50?SC.dn:SC.up} icon="📊"/>
+      </div>
+
+      <div style={{...sjCard,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <SectionTitle icon="💳" title="บัตรเครดิต"/>
+          <button onClick={()=>setAdding(v=>!v)} style={sjBtn(adding?"#94a3b8":"#6366f1")}>{adding?"ยกเลิก":"+ เพิ่มบัตร"}</button>
+        </div>
+        {adding&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 120px 120px 110px auto",gap:6,marginTop:10}}>
+            <input placeholder="ชื่อบัตร" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={sjInp}/>
+            <input placeholder="วงเงิน" value={form.limit} onChange={e=>setForm(f=>({...f,limit:e.target.value}))} style={sjInp}/>
+            <input placeholder="ยอดค้าง" value={form.balance} onChange={e=>setForm(f=>({...f,balance:e.target.value}))} style={sjInp}/>
+            <input placeholder="ครบกำหนด" value={form.due} onChange={e=>setForm(f=>({...f,due:e.target.value}))} style={sjInp}/>
+            <button onClick={addCard} style={sjBtn("#16a34a")}>เพิ่ม</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
+        {cards.map((c,idx)=>{ const u=(+c.limit||0)>0?(+c.balance||0)/c.limit*100:0; const grad=["linear-gradient(135deg,#6366f1,#8b5cf6)","linear-gradient(135deg,#0ea5e9,#06b6d4)","linear-gradient(135deg,#f59e0b,#f97316)","linear-gradient(135deg,#10b981,#059669)","linear-gradient(135deg,#ec4899,#be185d)"][idx%5]; return (
+          <div key={c.id} style={{borderRadius:16,overflow:"hidden",boxShadow:sjShadow,border:`1px solid ${SC.border}`,background:SC.card}}>
+            <div style={{background:grad,padding:"16px 18px",color:"#fff"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <input value={c.name} onChange={e=>editCard(c.id,"name",e.target.value)} style={{background:"transparent",border:"none",color:"#fff",fontWeight:800,fontSize:15,outline:"none",fontFamily:"inherit",width:"70%"}}/>
+                <button onClick={()=>delCard(c.id)} style={{background:"rgba(255,255,255,.2)",border:"none",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:11,cursor:"pointer"}}>ลบ</button>
+              </div>
+              <div style={{fontSize:11,opacity:.85,marginTop:18}}>ยอดค้างชำระ</div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:13,opacity:.85}}>฿</span>
+                <input value={c.balance} onChange={e=>editCard(c.id,"balance",e.target.value)} style={{background:"transparent",border:"none",color:"#fff",fontWeight:800,fontSize:22,outline:"none",fontFamily:"'DM Mono',monospace",width:"100%"}}/>
+              </div>
+            </div>
+            <div style={{padding:"12px 18px"}}>
+              <div style={{height:7,background:"#f1f5f9",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+                <div style={{width:`${Math.min(100,u)}%`,height:"100%",background:u>70?SC.dn:u>40?"#f59e0b":SC.up}}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
+                <label style={{color:SC.muted}}>วงเงิน<br/><input value={c.limit} onChange={e=>editCard(c.id,"limit",e.target.value)} style={{...sjInp,marginTop:2}}/></label>
+                <label style={{color:SC.muted}}>ครบกำหนด<br/><input value={c.due} onChange={e=>editCard(c.id,"due",e.target.value)} style={{...sjInp,marginTop:2}}/></label>
+              </div>
+              <div style={{marginTop:8,fontSize:12,color:SC.sub}}>ใช้วงเงิน {fmt(u,1)}% · เหลือ {fmt((+c.limit||0)-(+c.balance||0))} ฿</div>
+            </div>
+          </div>
+        );})}
+      </div>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════
 //  APP
 // ═══════════════════════════════════════════════════
 function App() {
@@ -425,6 +795,15 @@ function App() {
   const [showAddFor,setShowAddFor]=useState(null);
   const fileRef=useRef();
 
+  // ── SJ Company: funds / income / expense / cards ──
+  const sjStored=sjLoad()||SJ_DEFAULT;
+  const [funds,    setFunds]    = useState(sjStored.funds    ?? SJ_FUNDS_SEED);
+  const [fundBuys, setFundBuys] = useState(sjStored.fundBuys ?? SJ_FUNDBUYS_SEED);
+  const [income,   setIncome]   = useState(sjStored.income   ?? SJ_INCOME_SEED);
+  const [expenses, setExpenses] = useState(sjStored.expenses ?? SJ_EXPENSE_SEED);
+  const [cards,    setCards]    = useState(sjStored.cards    ?? SJ_CARDS_SEED);
+  useEffect(()=>{ sjSave({funds,fundBuys,income,expenses,cards}); },[funds,fundBuys,income,expenses,cards]);
+
   // ── computed ────────────────────────────────────
   const activePorts=selPort==="all"?ports:ports.filter(p=>p.id===selPort);
 
@@ -447,6 +826,14 @@ function App() {
 
   const totalCash=activePorts.reduce((a,p)=>a+p.cash,0),stocksMV=consolidated.reduce((a,h)=>a+h.marketValue,0),totalMV=stocksMV+totalCash,totalCost=consolidated.reduce((a,h)=>a+h.totalCost,0),totalPnL=consolidated.reduce((a,h)=>a+h.pnl,0),totalPnLPct=totalCost>0?(totalPnL/totalCost*100):0;
   const totalPortValue=totalMV; // ใช้ใน holdings tab สำหรับคำนวณ target value
+  // ── SJ unified aggregates ──
+  const fundsValue=funds.reduce((a,f)=>a+(+f.value||0),0), fundsCost=funds.reduce((a,f)=>a+(+f.cost||0),0), fundsPnL=fundsValue-fundsCost;
+  const cardsBalance=cards.reduce((a,c)=>a+(+c.balance||0),0);
+  const incMonthly=income.reduce((a,i)=>a+toMonthly(i.amount,i.freq),0);
+  const expMonthly=expenses.reduce((a,e)=>a+toMonthly(e.amount,e.freq),0);
+  const netMonthly=incMonthly-expMonthly;
+  // Net worth = หุ้น(MV) + เงินสด + กองทุน − หนี้บัตรเครดิต
+  const netWorth=stocksMV+totalCash+fundsValue-cardsBalance;
   // pnlPct: คิดจาก stock_cost+cash (total capital deployed)
   const portSums=ports.map(p=>{ const mv=p.holdings.reduce((a,h)=>a+h.shares*(prices[h.symbol]??h.avgCost),0)+p.cash,c=p.holdings.reduce((a,h)=>a+h.shares*h.avgCost,0),pnl=p.holdings.reduce((a,h)=>a+h.shares*((prices[h.symbol]??h.avgCost)-h.avgCost),0),totalCapital=c+p.cash; return{...p,mv,cost:c,pnl,pnlPct:totalCapital>0?(pnl/totalCapital*100):0}; });
   // กรองวันหยุดสุดสัปดาห์ออก (ตลาดหุ้นปิด เสาร์=6, อาทิตย์=0)
@@ -574,7 +961,7 @@ function App() {
   const inp={background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,padding:"8px 12px",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",width:"100%"};
   const btn=bg=>({background:bg,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:12,fontFamily:"inherit",transition:"opacity .15s"});
 
-  const TABS=[["overview","ภาพรวม"],["holdings","Stock"],["analysis","วิเคราะห์"],["manage","จัดการพอร์ต"],["transactions","รายการ"]];
+  const TABS=[["overview","ภาพรวม"],["holdings","หุ้น"],["funds","กองทุน"],["cashflow","รายรับ-จ่าย"],["cards","บัตรเครดิต"],["analysis","วิเคราะห์"],["manage","จัดการพอร์ต"],["transactions","รายการ"]];
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans','Noto Sans Thai',sans-serif"}}>
@@ -597,7 +984,7 @@ function App() {
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>📊</div>
           <div>
-            <div style={{fontWeight:800,fontSize:14,letterSpacing:-.3,color:C.text}}>REDCODE PORTFOLIO</div>
+            <div style={{fontWeight:800,fontSize:14,letterSpacing:-.3,color:C.text}}>SJ COMPANY</div>
             <div style={{fontSize:10,color:C.muted,display:"flex",gap:8,alignItems:"center"}}>
               <span>SET {fmt(setP)}</span><span>·</span><span>SET50 {fmt(set50P)}</span><span>·</span>
               <span style={{color:staleDays>0?"#f59e0b":C.muted}}>
@@ -631,10 +1018,10 @@ function App() {
       </div>
 
       {/* ── TAB BAR ── */}
-      <div style={{background:"#fff",borderBottom:`1px solid ${C.border}`,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"flex-end"}}>
-        <div style={{display:"flex",gap:2,background:"#f1f5f9",borderRadius:10,padding:3}}>
+      <div style={{background:"#fff",borderBottom:`1px solid ${C.border}`,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"center",overflowX:"auto"}}>
+        <div style={{display:"flex",gap:2,background:"#f1f5f9",borderRadius:10,padding:3,flexWrap:"nowrap"}}>
           {TABS.map(([id,lbl])=>(
-            <button key={id} onClick={()=>setTab(id)} style={{background:tab===id?"#fff":"transparent",color:tab===id?C.text:C.muted,border:"none",borderRadius:8,padding:"8px 21px",fontSize:16,fontWeight:600,cursor:"pointer",fontFamily:"inherit",boxShadow:tab===id?shadow:"none",transition:"all .15s"}}>{lbl}</button>
+            <button key={id} onClick={()=>setTab(id)} style={{background:tab===id?"#fff":"transparent",color:tab===id?C.text:C.muted,border:"none",borderRadius:8,padding:"8px 16px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",boxShadow:tab===id?shadow:"none",transition:"all .15s",whiteSpace:"nowrap"}}>{lbl}</button>
           ))}
         </div>
       </div>
@@ -643,6 +1030,29 @@ function App() {
 
         {/* ══ OVERVIEW ══ */}
         {tab==="overview"&&<>
+          {/* ── SJ NET WORTH BANNER ── */}
+          <div style={{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",borderRadius:18,padding:"22px 24px",marginBottom:16,color:"#fff",boxShadow:"0 8px 24px rgba(99,102,241,.25)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:16,alignItems:"flex-end"}}>
+              <div>
+                <div style={{fontSize:13,opacity:.85,fontWeight:600}}>💎 SJ Company · ความมั่งคั่งสุทธิ (Net Worth)</div>
+                <div style={{fontSize:38,fontWeight:800,fontFamily:"'DM Mono',monospace",lineHeight:1.1,marginTop:4}}>฿{fmt(netWorth)}</div>
+                <div style={{fontSize:13,opacity:.9,marginTop:4}}>คงเหลือสุทธิ/เดือน: <b>{netMonthly>=0?"+":""}{fmt(netMonthly)} ฿</b> · ปันผล+เงินเดือน รวม {fmt(incMonthly)} ฿/ด.</div>
+              </div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                {[
+                  {l:"หุ้น (MV)",v:stocksMV,i:"📈"},
+                  {l:"กองทุน",v:fundsValue,i:"🏦"},
+                  {l:"เงินสด",v:totalCash,i:"💵"},
+                  {l:"หนี้บัตร",v:-cardsBalance,i:"💳"},
+                ].map(x=>(
+                  <div key={x.l} style={{background:"rgba(255,255,255,.15)",borderRadius:12,padding:"10px 14px",minWidth:110,backdropFilter:"blur(4px)"}}>
+                    <div style={{fontSize:11,opacity:.85}}>{x.i} {x.l}</div>
+                    <div style={{fontSize:16,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{x.v<0?"-":""}฿{fmt(Math.abs(x.v),0)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           {/* KPIs */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:16}}>
             {[
@@ -733,6 +1143,15 @@ function App() {
             <BarChartSVG data={[...consolidated].sort((a,b)=>(b.marketValue||0)-(a.marketValue||0)).map(h=>({name:h.symbol,pnl:h.pnl}))} height={120}/>
           </div>
         </>}
+
+        {/* ══ FUNDS ══ */}
+        {tab==="funds"&&<FundsView funds={funds} setFunds={setFunds} fundBuys={fundBuys} setFundBuys={setFundBuys}/>}
+
+        {/* ══ CASHFLOW ══ */}
+        {tab==="cashflow"&&<CashflowView income={income} setIncome={setIncome} expenses={expenses} setExpenses={setExpenses}/>}
+
+        {/* ══ CREDIT CARDS ══ */}
+        {tab==="cards"&&<CardsView cards={cards} setCards={setCards}/>}
 
         {/* ══ HOLDINGS ══ */}
         {tab==="holdings"&&<>
