@@ -38,6 +38,7 @@ const SECTORS={
 const STOCKS=['ADVICE','COM7','JMART'];
 const STOCK_COLOR={'ADVICE':'#6366f1','COM7':'#10b981','JMART':'#f59e0b'};
 const STOCK_SECTOR={ADVICE:'IT_RETAIL',COM7:'IT_RETAIL',JMART:'DIVERSIFIED'};
+const STOCK_STORE={ADVICE:'Advice',COM7:'COM7 / BNN',JMART:'Jmart / JMT'};
 
 const TRAFFIC_CFG={
   google_trends: {label:'Google Trends',w:0.35,max:100},
@@ -118,8 +119,9 @@ function calcSignal(data,stock){
   const trafRaw=calcTrafficLevel(sd.traffic);
   const trafScore=trafRaw!==null?Math.round((trafRaw-50)*2):null;
 
-  // Factor 3: Promo discipline (20%)
-  const promoScore=calcPromoSignal(sd.prices);
+  // Factor 3: Promo discipline (20%) — filter to stock's own store to avoid cross-store noise
+  const ownPrices=(sd.prices||[]).filter(e=>!STOCK_STORE[stock]||e.store===STOCK_STORE[stock]);
+  const promoScore=calcPromoSignal(ownPrices);
 
   // Factor 4: News flow (15%)
   let nws=0,nwt=0;
@@ -427,10 +429,10 @@ function AlertsPanel({data}){
   STOCKS.forEach(stock=>{
     const {composite,staleDays}=calcSignal(data,stock);
     const sd=data?.stocks?.[stock]||{};
-    // promo alert
+    // promo alert — filter to stock's own store to avoid cross-store noise
     const monday=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
     const byWeek={};
-    (sd.prices||[]).forEach(e=>{
+    (sd.prices||[]).filter(e=>!STOCK_STORE[stock]||e.store===STOCK_STORE[stock]).forEach(e=>{
       if(!e.promoScore) return;
       const w=monday(e.date);
       if(!byWeek[w]) byWeek[w]={sum:0,n:0};
@@ -506,10 +508,10 @@ function HeatmapWithSector({data}){
     const sent=wt?Math.round(ws/wt*100):null;
     const traf=calcTrafficLevel(sd.traffic);
 
-    // promo ratio
+    // promo ratio — filter to stock's own store
     const monday=d=>{const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10);};
     const byWeek={};
-    (sd.prices||[]).forEach(e=>{
+    (sd.prices||[]).filter(e=>!STOCK_STORE[stock]||e.store===STOCK_STORE[stock]).forEach(e=>{
       if(!e.promoScore) return;
       const w=monday(e.date);
       if(!byWeek[w]) byWeek[w]={sum:0,n:0};
@@ -664,6 +666,42 @@ function CompBars({data}){
   );
 }
 
+// ─── latest news feed ─────────────────────────────────────────────────────────
+function LatestNews({data}){
+  const items=STOCKS.flatMap(stock=>{
+    const sd=data?.stocks?.[stock]||{};
+    return (sd.news||[]).map(n=>({...n,stock}));
+  }).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  if(!items.length) return null;
+  const sentColor=s=>s==='positive'?'#22c55e':s==='negative'?'#ef4444':'#94a3b8';
+  const sentIcon=s=>s==='positive'?'▲':s==='negative'?'▼':'◆';
+  return(
+    <div style={{background:'#1e293b',border:'1px solid #334155',borderRadius:12,padding:'16px 20px',marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:12}}>📰 Recent News Flow</div>
+      <div style={{display:'flex',flexDirection:'column',gap:7}}>
+        {items.map((n,i)=>{
+          const c=STOCK_COLOR[n.stock];
+          const sc=sentColor(n.sentiment);
+          return(
+            <div key={i} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'8px 10px',background:'#0f172a',borderRadius:8,borderLeft:`3px solid ${c}`}}>
+              <span style={{fontSize:13,color:sc,flexShrink:0,marginTop:1}}>{sentIcon(n.sentiment)}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,color:'#e2e8f0',lineHeight:1.4,marginBottom:2}}>{n.title}</div>
+                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                  <span style={{fontSize:10,fontWeight:700,padding:'1px 6px',borderRadius:3,background:`${c}25`,color:c}}>{n.stock}</span>
+                  {n.publisher&&<span style={{fontSize:10,color:'#475569'}}>{n.publisher}</span>}
+                  <span style={{fontSize:10,color:'#334155',marginLeft:'auto'}}>{n.date}</span>
+                  {n.verified&&<span style={{fontSize:10,color:'#22c55e'}}>✓</span>}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── app ──────────────────────────────────────────────────────────────────────
 function App(){
   const [data,setData]=useState(null);
@@ -711,6 +749,9 @@ function App(){
         <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:8,textTransform:'uppercase',letterSpacing:1}}>⚡ Active Alerts</div>
         <AlertsPanel data={data}/>
       </div>
+
+      {/* news feed */}
+      <LatestNews data={data}/>
 
       {/* IT Retail sector block */}
       <SectorBlock sectorKey="IT_RETAIL" data={data}/>

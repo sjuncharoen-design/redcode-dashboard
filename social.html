@@ -22,18 +22,27 @@
 (function(){
   var K = 'rc_social_v1';
   var _ex; try{_ex=JSON.parse(localStorage.getItem(K)||'null');}catch(e){_ex=null;}
-  if(_ex&&(_ex.config&&_ex.config._v||0)>=3) return;
+  if(_ex&&(_ex.config&&_ex.config._v||0)>=4) return;
   var ago = function(n){ var d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
   var id  = function(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); };
   var D = {
     config: {
-      _v: 3,
+      _v: 4,
       trackedStocks: ['ADVICE','COM7','JMART'],
       products: ['iPhone 17 128GB','iPhone 17 Pro 256GB','iPhone 17 Pro Max 256GB','Samsung S25 Ultra 256GB','MacBook Air M4 16GB']
     },
     stocks: {
       ADVICE: {
         prices: [
+          // ADVICE own-store price baseline — 6 weeks for accurate promo-discipline signal
+          {id:id(),product:'iPhone 17 128GB',store:'Advice',price:35900,promoScore:2,promo:'ราคาปกติ',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(40),verified:true,note:'Pre-launch no promo'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Advice',price:46900,promoScore:2,promo:'ราคาปกติ',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(40),verified:true,note:'Pre-launch'},
+          {id:id(),product:'iPhone 17 128GB',store:'Advice',price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน Krungthai',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(33),verified:true,note:'Launch week'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Advice',price:46900,promoScore:3,promo:'ผ่อน 0% 12 เดือน',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(33),verified:true,note:''},
+          {id:id(),product:'Samsung S25 Ultra 256GB',store:'Advice',price:41900,promoScore:3,promo:'ลด 1,000 Weekend',warranty:'1 ปีศูนย์ Samsung',url:'',date:ago(33),verified:true,note:''},
+          {id:id(),product:'iPhone 17 128GB',store:'Advice',price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน Krungthai',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(26),verified:true,note:''},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'Advice',price:46900,promoScore:3,promo:'ผ่อน 0% 12 เดือน',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(26),verified:true,note:''},
+          // Cross-store comparison (all 3 stores) — used by Price & Promo comparison tab
           // iPhone 17 128GB — 2-week price history
           {id:id(),product:'iPhone 17 128GB',store:'Advice',       price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน Krungthai',warranty:'1 ปีศูนย์+1 ปีร้าน',url:'',date:ago(13),verified:true,note:'วันเปิดตัว'},
           {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',  price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน',          warranty:'1 ปีศูนย์',          url:'',date:ago(13),verified:true,note:''},
@@ -1542,6 +1551,11 @@ const ConfigPanel = ({ data, setData, setStock }) => {
     const u={...data,config:{...data.config,products:products.filter(x=>x!==p)}};
     setData(u); saveData(u);
   };
+  const resetDemo=()=>{
+    if(!window.confirm('รีเซ็ตเป็นข้อมูลตัวอย่าง? ข้อมูลปัจจุบันจะหายทั้งหมด')) return;
+    localStorage.removeItem(SOCIAL_KEY);
+    window.location.reload();
+  };
   const exportJson=()=>{
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -1598,12 +1612,13 @@ const ConfigPanel = ({ data, setData, setStock }) => {
         </div>
         <div>
           <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Export / Import</div>
-          <div style={{display:'flex',gap:8}}>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
             <Btn onClick={exportJson} v="outline" sm>📤 Export JSON</Btn>
             <Btn onClick={exportCSV} v="outline" sm>📊 Export CSV</Btn>
             <label style={{padding:'4px 12px',borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,cursor:'pointer',fontWeight:600,color:C.sub,background:'#fff',display:'flex',alignItems:'center'}}>
               📥 Import<input ref={fileRef} type="file" accept=".json" onChange={importJson} style={{display:'none'}}/>
             </label>
+            <Btn onClick={resetDemo} v="ghost" sm>🔄 Reset Demo</Btn>
           </div>
         </div>
       </div>
