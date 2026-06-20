@@ -21,11 +21,13 @@
 // ── Demo seed (runs once on empty localStorage) ──────────────────────────────
 (function(){
   var K = 'rc_social_v1';
-  if (localStorage.getItem(K)) return;
+  var _ex; try{_ex=JSON.parse(localStorage.getItem(K)||'null');}catch(e){_ex=null;}
+  if(_ex&&(_ex.config&&_ex.config._v||0)>=3) return;
   var ago = function(n){ var d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
   var id  = function(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); };
   var D = {
     config: {
+      _v: 3,
       trackedStocks: ['ADVICE','COM7','JMART'],
       products: ['iPhone 17 128GB','iPhone 17 Pro 256GB','iPhone 17 Pro Max 256GB','Samsung S25 Ultra 256GB','MacBook Air M4 16GB']
     },
@@ -57,48 +59,105 @@
           {id:id(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:40900,promoScore:4,promo:'แถม Buds3+ลด 1,000',      warranty:'1 ปีศูนย์',          url:'',date:ago(3), verified:false,note:'รอยืนยัน'},
         ],
         sentiments: [
-          {id:id(),source:'pantip',sentiment:'positive',title:'รีวิว Advice สาขา Future Park · บริการดีมาก พนักงานรู้จักสินค้า',feedbackCount:87, date:ago(9), verified:true, url:'',note:''},
-          {id:id(),source:'pantip',sentiment:'positive',title:'Advice vs BNN ซื้อ iPhone 17 ที่ไหนดีกว่า? ส่วนใหญ่แนะนำ Advice',feedbackCount:142,date:ago(6), verified:true, url:'',note:''},
-          {id:id(),source:'google_rev',sentiment:'positive',title:'Google Review Advice Central World 4.5★ (320 reviews)',       feedbackCount:18, date:ago(3), verified:true, url:'',note:'เดือน มิ.ย.'},
-          {id:id(),source:'facebook_grp',sentiment:'negative',title:'กลุ่ม iPhone TH · คนร้องเรียนสต็อก iPhone 17 Pro Advice ไม่พอ',feedbackCount:23,date:ago(9),verified:false,url:'',note:'สต็อกตึง'},
-          {id:id(),source:'shopee_rev',sentiment:'positive',title:'Shopee Advice Official · Rating 4.8★ ส่งเร็ว แพ็คดี',          feedbackCount:210,date:ago(3), verified:true, url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'positive',title:'ข่าวลือ ADVICE ได้โควตา iPhone 17 Apple จัดสรรเยอะสุดใน IT retail ไทย',feedbackCount:45,date:ago(42),verified:true,url:'',note:'Pre-launch speculation'},
+          {id:id(),source:'google_rev',sentiment:'positive',title:'Google Review Advice Central Lat Phrao 4.5★ (280 reviews) สม่ำเสมอดี',feedbackCount:12,date:ago(38),verified:true,url:'',note:'Baseline sentiment'},
+          {id:id(),source:'news_official',sentiment:'positive',title:'ADVICE ยืนยันเป็น Apple Premium Reseller ได้โควตา iPhone 17 ทุกสี',feedbackCount:1,date:ago(35),verified:true,url:'',note:'Official allocation'},
+          {id:id(),source:'pantip',sentiment:'positive',title:'Launch day: ต่อคิวที่ Advice Future Park ตั้งแต่ตี 4 สาขา Central World เต็ม',feedbackCount:134,date:ago(28),verified:true,url:'',note:'iPhone 17 launch'},
+          {id:id(),source:'shopee_rev',sentiment:'positive',title:'Shopee ADVICE Official · Rating 4.8★ (12K+ reviews) ส่งเร็ว แพ็คดี',feedbackCount:189,date:ago(25),verified:true,url:'',note:'E-commerce channel'},
+          {id:id(),source:'facebook_grp',sentiment:'negative',title:'กลุ่ม iPhone TH 350K: สต็อก iPhone 17 Pro ADVICE บางสาขาไม่มี Desert Titanium',feedbackCount:52,date:ago(21),verified:false,url:'',note:'Stock shortage'},
+          {id:id(),source:'pantip',sentiment:'negative',title:'สต็อก Pro รุ่น Desert Titanium Advice ทั่วประเทศหมด ต้องรอ 2 สัปดาห์',feedbackCount:67,date:ago(18),verified:true,url:'',note:'Supply constraint'},
+          {id:id(),source:'google_rev',sentiment:'positive',title:'Google Review Advice Central World 4.5★ service ดีขึ้น หลัง launch',feedbackCount:24,date:ago(14),verified:true,url:'',note:'Recovery'},
+          {id:id(),source:'pantip',sentiment:'positive',title:'Advice Weekend deal ผ่อน 0%+เคส — คุ้มกว่า BNN ถ้าใช้ Krungthai',feedbackCount:91,date:ago(12),verified:true,url:'',note:'Deal comparison'},
+          {id:id(),source:'pantip',sentiment:'positive',title:'Advice vs BNN ซื้อ iPhone 17 ที่ไหนดีกว่า? ส่วนใหญ่แนะนำ Advice เพราะประกันร้าน',feedbackCount:142,date:ago(9),verified:true,url:'',note:''},
+          {id:id(),source:'shopee_rev',sentiment:'positive',title:'Shopee Advice Official · Rating 4.8★ ส่งเร็ว แพ็คดี อัพเดตล่าสุด',feedbackCount:210,date:ago(7),verified:true,url:'',note:''},
+          {id:id(),source:'facebook_grp',sentiment:'neutral',title:'กลุ่ม ซื้อขาย IT · ถามเรื่องประกันเพิ่ม Advice vs ร้านอิสระ ราคาต่างกันมั้ย',feedbackCount:31,date:ago(5),verified:false,url:'',note:''},
+          {id:id(),source:'google_rev',sentiment:'positive',title:'Google Review Advice Central World 4.5★ (320 reviews)',feedbackCount:18,date:ago(3),verified:true,url:'',note:'เดือน มิ.ย.'},
+          {id:id(),source:'pantip',sentiment:'positive',title:'Weekend ที่ Advice MBK บรรยากาศดี staff รู้จักสินค้า แนะนำถูกต้อง',feedbackCount:77,date:ago(1),verified:true,url:'',note:''},
         ],
         traffic: [
-          {id:id(),source:'google_trends',  value:68, date:ago(13),verified:true, note:'ก่อน launch week'},
-          {id:id(),source:'google_trends',  value:82, date:ago(9), verified:true, note:'launch week'},
-          {id:id(),source:'google_trends',  value:91, date:ago(3), verified:true, note:'peak — weekend deal'},
-          {id:id(),source:'google_trends',  value:87, date:ago(1), verified:true, note:'ยังสูงอยู่'},
-          {id:id(),source:'google_reviews', value:18, date:ago(9), verified:true, note:'new reviews/สัปดาห์ สาขา Central World'},
-          {id:id(),source:'google_reviews', value:31, date:ago(3), verified:true, note:'เพิ่มขึ้น — launch traffic'},
-          {id:id(),source:'similarweb',     value:1850,date:ago(9),verified:false,note:'K visits/mo (advice.co.th)'},
-          {id:id(),source:'app_downloads',  value:42, date:ago(9), verified:false,note:'K downloads/mo (Advice App)'},
+          {id:id(),source:'google_trends',value:42,date:ago(42),verified:true,note:'Pre-launch baseline'},
+          {id:id(),source:'google_trends',value:55,date:ago(35),verified:true,note:'Pre-launch buzz'},
+          {id:id(),source:'google_trends',value:78,date:ago(28),verified:true,note:'Launch week spike'},
+          {id:id(),source:'google_trends',value:72,date:ago(21),verified:true,note:'Post-launch sustained'},
+          {id:id(),source:'google_trends',value:68,date:ago(13),verified:true,note:'ก่อน Weekend Deal'},
+          {id:id(),source:'google_trends',value:82,date:ago(9), verified:true,note:'Weekend deal week'},
+          {id:id(),source:'google_trends',value:91,date:ago(3), verified:true,note:'peak — weekend deal'},
+          {id:id(),source:'google_trends',value:87,date:ago(1), verified:true,note:'ยังสูงอยู่'},
+          {id:id(),source:'google_reviews',value:9, date:ago(28),verified:true,note:'new reviews/wk launch'},
+          {id:id(),source:'google_reviews',value:14,date:ago(21),verified:true,note:'post-launch'},
+          {id:id(),source:'google_reviews',value:18,date:ago(9), verified:true,note:'new reviews/สัปดาห์ สาขา Central World'},
+          {id:id(),source:'google_reviews',value:31,date:ago(3), verified:true,note:'เพิ่มขึ้น — launch traffic'},
+          {id:id(),source:'similarweb',    value:1420,date:ago(35),verified:false,note:'K visits/mo pre-launch'},
+          {id:id(),source:'similarweb',    value:1850,date:ago(9), verified:false,note:'K visits/mo (advice.co.th)'},
+          {id:id(),source:'app_downloads', value:35, date:ago(35),verified:false,note:'K downloads/mo pre-launch'},
+          {id:id(),source:'app_downloads', value:42, date:ago(9), verified:false,note:'K downloads/mo (Advice App)'},
+          {id:id(),source:'app_downloads', value:51, date:ago(3), verified:false,note:'K downloads/mo ล่าสุด'},
+          {id:id(),source:'shopee_sales',  value:4200,date:ago(9), verified:false,note:'units/mo Shopee'},
+          {id:id(),source:'shopee_sales',  value:5800,date:ago(3), verified:false,note:'units/mo ล่าสุด'},
         ],
         news: [
+          {id:id(),source:'news_official',sentiment:'positive',title:'Apple Thailand ยืนยัน ADVICE เป็น Premium Reseller ได้โควตา iPhone 17',publisher:'กรุงเทพธุรกิจ',date:ago(38),verified:true,url:'',summary:'โควตา iPhone 17 ADVICE สูงสุดในกลุ่ม IT retail ไทย'},
+          {id:id(),source:'news_official',sentiment:'positive',title:'iPhone 17 Launch Day: Advice บันทึกยอดขาย D1 สูงสุดในประวัติศาสตร์ +35% vs iPhone 16',publisher:'ประชาชาติธุรกิจ',date:ago(28),verified:true,url:'',summary:'ยอดขาย Day 1 สูงกว่า iPhone 16 +35%'},
           {id:id(),source:'news_official',sentiment:'positive',title:'Advice ตั้งเป้า iPhone 17 Preorder 5 หมื่นเครื่อง Q3/69',publisher:'ประชาชาติธุรกิจ',date:ago(9),verified:true,url:'',summary:'ตั้งเป้าสูงสุดในประวัติศาสตร์ margin ดีขึ้น YoY'},
           {id:id(),source:'news_official',sentiment:'positive',title:'ADVICE Q2/69 กำไรโต 18% YoY แรงหนุนจาก iPhone super cycle',publisher:'กรุงเทพธุรกิจ',date:ago(6),verified:true,url:'',summary:'ผลประกอบการแข็งแกร่ง Q2 margin iPhone ดีขึ้น'},
+          {id:id(),source:'news_official',sentiment:'neutral',title:'ADVICE เปิดรับ Samsung S25 FE preorder รอ Q4/69',publisher:'TechTalkThai',date:ago(2),verified:true,url:'',summary:'Diversify เพิ่ม Samsung lineup หลัง iPhone cycle ชะลอ'},
         ]
       },
       COM7: {
         prices: [
-          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
-          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:5,promo:'Mega Deal ผ่อน 0% + AirPods',warranty:'1 ปีศูนย์',url:'',date:ago(3),verified:true,note:'aggressive promo'},
-          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46900,promoScore:4,promo:'ผ่อน 0% + AirPods 4',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
-          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46500,promoScore:5,promo:'ลด 400 + AirPods Deal',warranty:'1 ปีศูนย์',url:'',date:ago(6),verified:true,note:'ลดราคาจริง'},
-          {id:id(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:41900,promoScore:3,promo:'แถม Galaxy Buds3',warranty:'1 ปีศูนย์',url:'',date:ago(13),verified:true,note:''},
+          // pre-launch: promoScore 2 (baseline minimal)
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:2,promo:'ราคาปกติ ผ่อน 0%',warranty:'1 ปีศูนย์',url:'',date:ago(40),verified:true,note:'Pre-launch no promo'},
+          // launch week: promoScore 3 (standard)
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:3,promo:'ผ่อน 0% 10 เดือน',warranty:'1 ปีศูนย์',url:'',date:ago(33),verified:true,note:'Launch week'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46900,promoScore:3,promo:'ผ่อน 0% 12 เดือน',warranty:'1 ปีศูนย์',url:'',date:ago(33),verified:true,note:''},
+          // week 4: escalating bundle
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:3,promo:'ผ่อน 0% + ส่วนลด',warranty:'1 ปีศูนย์',url:'',date:ago(26),verified:true,note:'เริ่มเพิ่มโปร'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46900,promoScore:4,promo:'ผ่อน 0% 12 เดือน + AirPods 4',warranty:'1 ปีศูนย์',url:'',date:ago(26),verified:true,note:'AirPods 4 มูลค่า 4,990'},
+          // week 3: aggressive
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:4,promo:'ผ่อน 0% 10 เดือน + ฟรีเคส',warranty:'1 ปีศูนย์',url:'',date:ago(19),verified:true,note:'เพิ่มของแถม'},
+          {id:id(),product:'Samsung S25 Ultra 256GB',store:'COM7 / BNN',price:41900,promoScore:3,promo:'แถม Galaxy Buds3',warranty:'1 ปีศูนย์',url:'',date:ago(19),verified:true,note:''},
+          // week 2: MegaDeal begins
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:5,promo:'Mega Deal ผ่อน 0% + AirPods',warranty:'1 ปีศูนย์',url:'',date:ago(9),verified:true,note:'aggressive promo'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46500,promoScore:5,promo:'ลด 400 + AirPods Deal',warranty:'1 ปีศูนย์',url:'',date:ago(9),verified:true,note:'ลดราคาจริง'},
+          // current week: still MegaDeal → ratio ~1.6 → ⚠️ promo alert triggered!
+          {id:id(),product:'iPhone 17 128GB',store:'COM7 / BNN',price:35900,promoScore:5,promo:'Mega Deal ผ่อน 0% + AirPods',warranty:'1 ปีศูนย์',url:'',date:ago(3),verified:true,note:'Deal สุดพิเศษ'},
+          {id:id(),product:'iPhone 17 Pro 256GB',store:'COM7 / BNN',price:46900,promoScore:5,promo:'ผ่อน 0% + AirPods 4 ฟรี',warranty:'1 ปีศูนย์',url:'',date:ago(1),verified:true,note:'Mega Deal'},
         ],
         sentiments: [
-          {id:id(),source:'pantip',sentiment:'positive',title:'BNN สาขา MBK · พนักงานดี มีสินค้าทดลองเยอะ ไม่กดดัน',feedbackCount:34,date:ago(9),verified:true,url:'',note:''},
-          {id:id(),source:'facebook_grp',sentiment:'neutral',title:'ถาม BNN vs Advice ต่างกันยังไง ราคาเหมือนกัน แต่โปรต่างกัน',feedbackCount:45,date:ago(3),verified:false,url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'neutral',title:'ถาม COM7 vs Advice ซื้อ iPhone 17 ที่ไหนดี — ยังไม่มีข้อมูลพอ',feedbackCount:23,date:ago(40),verified:true,url:'',note:'Pre-launch'},
+          {id:id(),source:'news_official',sentiment:'positive',title:'COM7 เปิด BNN Express 15 สาขาใหม่ Q3/69 ขยาย Tier 2',feedbackCount:1,date:ago(35),verified:true,url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'positive',title:'BNN launch event สาขา Central Bangkok บรรยากาศดี ไม่แน่นเท่า Advice',feedbackCount:88,date:ago(28),verified:true,url:'',note:'Launch event'},
+          {id:id(),source:'facebook_grp',sentiment:'positive',title:'BNN สาขา MBK · พนักงานดี มีสินค้าทดลองเยอะ ไม่กดดัน',feedbackCount:34,date:ago(21),verified:true,url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'neutral',title:'ถาม BNN vs Advice ต่างกันยังไง ราคาเหมือนกัน แต่โปรต่างกัน',feedbackCount:46,date:ago(18),verified:false,url:'',note:''},
+          {id:id(),source:'google_rev',sentiment:'positive',title:'Google Review COM7 Central 4.4★ (220 reviews) สาขาใหญ่ดี',feedbackCount:16,date:ago(14),verified:true,url:'',note:''},
+          {id:id(),source:'shopee_rev',sentiment:'positive',title:'COM7 Online Shopee Official · Rating 4.7★ (8K reviews)',feedbackCount:156,date:ago(9),verified:true,url:'',note:'E-commerce channel'},
+          {id:id(),source:'facebook_grp',sentiment:'negative',title:'กลุ่ม iPhone TH: BNN push AirPods bundle ทุกคน รู้สึกถูกบังคับซื้อ',feedbackCount:39,date:ago(5),verified:false,url:'',note:'Bundle backlash'},
+          {id:id(),source:'pantip',sentiment:'neutral',title:'ถาม BNN Mega Deal คุ้มหรือเปล่า ถ้าไม่อยากได้ AirPods',feedbackCount:28,date:ago(3),verified:true,url:'',note:''},
+          {id:id(),source:'google_rev',sentiment:'positive',title:'Google Review COM7 Central 4.5★ พนักงานอธิบายดี มีโปรหลายอย่าง',feedbackCount:22,date:ago(1),verified:true,url:'',note:'เดือนล่าสุด'},
         ],
         traffic: [
+          {id:id(),source:'google_trends',value:38,date:ago(40),verified:true,note:'Pre-launch baseline'},
+          {id:id(),source:'google_trends',value:49,date:ago(33),verified:true,note:'Launch week'},
+          {id:id(),source:'google_trends',value:62,date:ago(26),verified:true,note:'Post-launch'},
+          {id:id(),source:'google_trends',value:58,date:ago(19),verified:true,note:'Settled'},
           {id:id(),source:'google_trends',value:54,date:ago(13),verified:true,note:''},
-          {id:id(),source:'google_trends',value:71,date:ago(6), verified:true,note:'iPhone launch'},
-          {id:id(),source:'google_trends',value:78,date:ago(1), verified:true,note:''},
-          {id:id(),source:'google_reviews',value:12,date:ago(6),verified:false,note:'K reviews/mo'},
-          {id:id(),source:'similarweb',value:2100,date:ago(9),verified:false,note:'K visits/mo com7.co.th'},
+          {id:id(),source:'google_trends',value:71,date:ago(6), verified:true,note:'Mega Deal week'},
+          {id:id(),source:'google_trends',value:78,date:ago(1), verified:true,note:'Continuing Mega Deal'},
+          {id:id(),source:'google_reviews',value:8, date:ago(26),verified:false,note:'new reviews/wk'},
+          {id:id(),source:'google_reviews',value:12,date:ago(6), verified:false,note:'K reviews/mo'},
+          {id:id(),source:'google_reviews',value:15,date:ago(1), verified:false,note:'Latest'},
+          {id:id(),source:'similarweb',    value:1950,date:ago(33),verified:false,note:'K visits/mo pre'},
+          {id:id(),source:'similarweb',    value:2100,date:ago(9), verified:false,note:'K visits/mo com7.co.th'},
+          {id:id(),source:'app_downloads', value:28, date:ago(33),verified:false,note:'K downloads/mo'},
+          {id:id(),source:'app_downloads', value:35, date:ago(9), verified:false,note:'K downloads/mo'},
+          {id:id(),source:'app_downloads', value:41, date:ago(3), verified:false,note:'K downloads/mo latest'},
+          {id:id(),source:'shopee_sales',  value:2800,date:ago(9), verified:false,note:'units/mo Shopee'},
+          {id:id(),source:'shopee_sales',  value:4100,date:ago(3), verified:false,note:'units/mo latest Mega Deal'},
         ],
         news: [
-          {id:id(),source:'news_official',sentiment:'positive',title:'COM7 เปิด BNN สาขาใหม่ 15 แห่ง H2/69 ขยาย Tier 2 เมือง',publisher:'ไทยรัฐออนไลน์',date:ago(6),verified:true,url:'',summary:''},
+          {id:id(),source:'news_official',sentiment:'positive',title:'COM7 เปิด BNN สาขาใหม่ 15 แห่ง H2/69 ขยาย Tier 2 เมือง',publisher:'ไทยรัฐออนไลน์',date:ago(33),verified:true,url:'',summary:'ขยายสาขา Tier 2 รองรับ demand iPhone 17'},
+          {id:id(),source:'news_official',sentiment:'neutral',title:'COM7 Q2/69 กำไรทรงตัว YoY — margin iPhone กดดันจาก bundle deal H2',publisher:'กรุงเทพธุรกิจ',date:ago(14),verified:true,url:'',summary:'Analyst ตั้งคำถาม bundle deal กระทบ gross margin'},
+          {id:id(),source:'news_official',sentiment:'negative',title:'นักวิเคราะห์: AirPods bundle deal COM7 อาจกดดัน gross margin Q3/69',publisher:'ประชาชาติธุรกิจ',date:ago(3),verified:true,url:'',summary:'KGI ลด target price COM7 -4% จากความเสี่ยง margin'},
         ]
       },
       JMART: {
@@ -110,17 +169,33 @@
           {id:id(),product:'iPhone 17 Pro 256GB',store:'Jmart / JMT',price:47000,promoScore:3,promo:'Trade-in ลด 2,500 + สินเชื่อ JMT',warranty:'1 ปีศูนย์',url:'',date:ago(6),verified:true,note:''},
         ],
         sentiments: [
-          {id:id(),source:'pantip',sentiment:'positive',title:'Jmart Fashion Island · บริการสินเชื่อดีมาก อนุมัติไว JMT finance',feedbackCount:28,date:ago(9),verified:true,url:'',note:'จุดเด่น financing'},
-          {id:id(),source:'facebook_grp',sentiment:'negative',title:'Consumer TH · Jmart ราคาแพงกว่า Advice 600 บาท ไม่คุ้มถ้าไม่ต้องผ่อนนาน',feedbackCount:67,date:ago(6),verified:true,url:'',note:''},
+          {id:id(),source:'pantip',sentiment:'neutral',title:'ถาม Jmart สินเชื่อ 0% 24 เดือน ใช้บัตรธนาคารไหนได้บ้าง',feedbackCount:18,date:ago(38),verified:true,url:'',note:'Pre-launch inquiry'},
+          {id:id(),source:'facebook_grp',sentiment:'negative',title:'Consumer TH · Jmart ราคาแพงกว่า Advice 600 บาท ไม่ควรซื้อถ้าไม่ต้องผ่อนนาน',feedbackCount:51,date:ago(30),verified:true,url:'',note:'Price comparison'},
+          {id:id(),source:'pantip',sentiment:'positive',title:'Jmart Fashion Island · บริการสินเชื่อดีมาก อนุมัติไว JMT finance ไม่ตรวจสลิปเงินเดือน',feedbackCount:28,date:ago(25),verified:true,url:'',note:'Financing USP'},
+          {id:id(),source:'google_rev',sentiment:'neutral',title:'Jmart Seacon Square 3.8★ (180 reviews) ทำเลไม่ดี แต่ staff ok',feedbackCount:11,date:ago(18),verified:true,url:'',note:'Mixed location'},
+          {id:id(),source:'facebook_grp',sentiment:'negative',title:'Consumer TH · Jmart ราคาแพงกว่า Advice อีกแล้ว iPhone 17 Pro +600',feedbackCount:67,date:ago(12),verified:true,url:'',note:''},
+          {id:id(),source:'news_official',sentiment:'neutral',title:'JMT Network NPL ratio Q2/69 เพิ่มขึ้นเล็กน้อย ยังอยู่ในระดับควบคุม',feedbackCount:1,date:ago(6),verified:true,url:'',note:'Segment risk'},
+          {id:id(),source:'pantip',sentiment:'neutral',title:'ผ่อน iPhone 17 ที่ Jmart ได้ 24 เดือน 0% สะดวกดี แต่ราคาตั้งต้นสูงกว่า',feedbackCount:22,date:ago(2),verified:true,url:'',note:''},
         ],
         traffic: [
+          {id:id(),source:'google_trends',value:29,date:ago(40),verified:true,note:'Pre-launch low'},
+          {id:id(),source:'google_trends',value:35,date:ago(33),verified:true,note:'Launch week'},
+          {id:id(),source:'google_trends',value:44,date:ago(26),verified:true,note:'Post-launch'},
+          {id:id(),source:'google_trends',value:41,date:ago(19),verified:true,note:''},
           {id:id(),source:'google_trends',value:41,date:ago(13),verified:true,note:''},
           {id:id(),source:'google_trends',value:53,date:ago(6), verified:true,note:'launch week'},
           {id:id(),source:'google_trends',value:49,date:ago(1), verified:true,note:'ต่ำกว่า ADVICE/COM7'},
-          {id:id(),source:'similarweb',value:890,date:ago(9),verified:false,note:'K visits/mo jmart.co.th'},
+          {id:id(),source:'google_reviews',value:5, date:ago(26),verified:false,note:'new reviews/wk'},
+          {id:id(),source:'google_reviews',value:7, date:ago(9), verified:false,note:''},
+          {id:id(),source:'google_reviews',value:9, date:ago(3), verified:false,note:''},
+          {id:id(),source:'similarweb',    value:720, date:ago(33),verified:false,note:'K visits/mo pre'},
+          {id:id(),source:'similarweb',    value:890, date:ago(9), verified:false,note:'K visits/mo jmart.co.th'},
         ],
         news: [
+          {id:id(),source:'news_official',sentiment:'neutral',title:'JMART ออก iPhone 17 ผ่าน JMT Finance ผ่อน 24 เดือน 0% ดึงลูกค้า Tier 2',publisher:'ไทยรัฐ',date:ago(38),verified:true,url:'',summary:'Differentiation via financing channel vs Advice/COM7'},
+          {id:id(),source:'news_official',sentiment:'negative',title:'JMT Network NPL ratio Q2/69 เพิ่มขึ้นเล็กน้อย ยังอยู่ระดับควบคุม',publisher:'หุ้นกรุ๊ป',date:ago(21),verified:true,url:'',summary:'NPL อยู่ระดับควบคุมได้ แต่ต้องติดตาม H2'},
           {id:id(),source:'news_official',sentiment:'neutral',title:'JMT Network รับพอร์ตหนี้ใหม่ Q2 ชะลอ รอดู H2',publisher:'หุ้นกรุ๊ป',date:ago(6),verified:true,url:'',summary:'NPL อยู่ระดับควบคุมได้'},
+          {id:id(),source:'news_official',sentiment:'negative',title:'Singer Finance ยอดขาย H1/69 ต่ำกว่าเป้า 12% — กระทบ JMART segment',publisher:'ประชาชาติธุรกิจ',date:ago(2),verified:true,url:'',summary:'Singer Finance segment ชะลอกระทบ consolidated net profit'},
         ]
       }
     }
@@ -1472,6 +1547,22 @@ const ConfigPanel = ({ data, setData, setStock }) => {
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
     a.download=`social_${today()}.json`; a.click();
   };
+  const exportCSV=()=>{
+    const BOM='﻿';
+    const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+    const rows=[['type','stock','date','source','sentiment','title','price','promoScore','product','store','value','verified','note']];
+    stocks.forEach(stock=>{
+      const sd=data.stocks?.[stock]||{};
+      (sd.sentiments||[]).forEach(e=>rows.push(['sentiment',stock,e.date,e.source,e.sentiment,e.title||'','','','','',e.feedbackCount||'',e.verified?'Y':'N',e.note||'']));
+      (sd.prices||[]).forEach(e=>rows.push(['price',stock,e.date,'','',e.title||'',e.price||'',e.promoScore||'',e.product||'',e.store||'','',e.verified?'Y':'N',e.note||'']));
+      (sd.traffic||[]).forEach(e=>rows.push(['traffic',stock,e.date,e.source,'','','','','','',e.value||'',e.verified?'Y':'N',e.note||'']));
+      (sd.news||[]).forEach(e=>rows.push(['news',stock,e.date,e.source,e.sentiment||'',e.title||'','','','','','',e.verified?'Y':'N',(e.summary||e.note||'')]));
+    });
+    const csv=BOM+rows.map(r=>r.map(esc).join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=`social_${today()}.csv`; a.click();
+  };
   const fileRef=useRef();
   const importJson=e=>{
     const f=e.target.files?.[0]; if(!f) return;
@@ -1509,6 +1600,7 @@ const ConfigPanel = ({ data, setData, setStock }) => {
           <div style={{fontSize:11,fontWeight:700,color:C.sub,marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Export / Import</div>
           <div style={{display:'flex',gap:8}}>
             <Btn onClick={exportJson} v="outline" sm>📤 Export JSON</Btn>
+            <Btn onClick={exportCSV} v="outline" sm>📊 Export CSV</Btn>
             <label style={{padding:'4px 12px',borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,cursor:'pointer',fontWeight:600,color:C.sub,background:'#fff',display:'flex',alignItems:'center'}}>
               📥 Import<input ref={fileRef} type="file" accept=".json" onChange={importJson} style={{display:'none'}}/>
             </label>
