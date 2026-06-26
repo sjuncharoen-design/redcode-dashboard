@@ -28,6 +28,10 @@ LOCAL_FILE         = os.environ.get("LOCAL_FILE", "")  # path ไฟล์วี
 GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
 WHISPER_MODEL      = os.environ.get("WHISPER_MODEL", "small")  # small=เร็ว / medium=แม่นยำกว่า
 OUTPUT_DIR         = Path(os.environ.get("OUTPUT_DIR", "fb_output"))
+# ENGINE: "gemini" = ส่งเสียงให้ Gemini สรุปตรงๆ (เร็วมาก, แนะนำ)
+#         "whisper" = ถอดเสียงในเครื่องด้วย faster-whisper (ช้า แต่ได้ transcript เต็ม)
+ENGINE             = os.environ.get("ENGINE", "gemini").lower()
+GEMINI_MODEL       = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 # ============================
 
 # นามสกุลไฟล์วีดีโอ/เสียงที่รองรับ
@@ -39,7 +43,10 @@ def install_deps():
         [sys.executable, "-m", "pip", "install", "-U", "yt-dlp", "-q"],
         capture_output=True
     )
-    for pkg in ["faster-whisper", "google-generativeai"]:
+    pkgs = ["google-generativeai", "imageio-ffmpeg"]
+    if ENGINE == "whisper":
+        pkgs.append("faster-whisper")
+    for pkg in pkgs:
         subprocess.run(
             [sys.executable, "-m", "pip", "install", pkg, "-q"],
             capture_output=True
@@ -127,6 +134,79 @@ def find_local_media() -> Path:
         # เลือกไฟล์ที่ใหญ่ที่สุด (น่าจะเป็นวีดีโอที่โหลดมา)
         return max(candidates, key=lambda f: f.stat().st_size)
     return None
+
+
+def extract_audio_small(media_path: Path, out_dir: Path) -> Path:
+    """ดึงเฉพาะเสียงออกมาเป็น mp3 ขนาดเล็ก (mono 16kHz) เพื่ออัปโหลดให้ Gemini เร็วๆ"""
+    import imageio_ffmpeg
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+
+    audio = out_dir / "audio.mp3"
+    if audio.exists():
+        audio.unlink()
+
+    print("   กำลังดึงเสียงออกจากวีดีโอ...")
+    cmd = [
+        ffmpeg, "-y", "-i", str(media_path),
+        "-vn", "-ac", "1", "-ar", "16000", "-b:a", "64k",
+        str(audio),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if not audio.exists():
+        print("❌ ดึงเสียงไม่สำเร็จ:")
+        print(result.stderr[-800:])
+        sys.exit(1)
+    mb = audio.stat().st_size / 1_000_000
+    print(f"   ได้ไฟล์เสียง {mb:.1f} MB")
+    return audio
+
+
+def summarize_from_audio(audio_path: Path, api_key: str, out_dir: Path) -> str:
+    """อัปโหลดเสียงให้ Gemini แล้วสรุปโดยตรง (ไม่ต้องถอด transcript ในเครื่อง)"""
+    import time
+    import google.generativeai as genai
+
+    genai.configure(api_key=api_key)
+
+    print("   กำลังอัปโหลดเสียงไป Gemini...")
+    f = genai.upload_file(str(audio_path))
+    # รอจน Gemini ประมวลผลไฟล์เสร็จ
+    while getattr(f.state, "name", str(f.state)) == "PROCESSING":
+        time.sleep(2)
+        f = genai.get_file(f.name)
+    if getattr(f.state, "name", str(f.state)) == "FAILED":
+        print("❌ Gemini ประมวลผลไฟล์เสียงไม่สำเร็จ")
+        sys.exit(1)
+
+    print("   กำลังให้ Gemini ฟังและสรุป...")
+    model = genai.GenerativeModel(GEMINI_MODEL)
+
+    prompt = """คุณคือนักวิเคราะห์หุ้นไทย (SET) เชี่ยวชาญด้าน Contrarian Value Investing
+
+ฟังเสียงคลิปนี้ (เป็นภาษาไทย) แล้วสรุปเป็นภาษาไทยในหัวข้อต่อไปนี้:
+
+1. **ประเด็นหลัก** — สรุป 3-5 bullet สั้นๆ ว่าพูดเรื่องอะไร
+2. **หุ้น/บริษัทที่พูดถึง** — ชื่อ + ประเด็นสำคัญของแต่ละตัว
+3. **ตัวเลขสำคัญ** — ราคา, P/E, EPS, revenue growth หรือ metrics ที่กล่าวถึง
+4. **มุมมอง/คำแนะนำ** — ผู้พูดมีมุมมองอย่างไร (bullish/bearish/neutral)
+5. **Action items** — มีอะไรที่ควรติดตามหรือศึกษาต่อ
+6. **คำพูดสำคัญ (quotes)** — ยกประโยคเด็ดๆ 3-5 ประโยคที่น่าสนใจ
+"""
+
+    response = model.generate_content([prompt, f])
+    summary = response.text
+
+    summary_path = out_dir / "summary.md"
+    summary_path.write_text(summary, encoding="utf-8")
+    print(f"✅ สรุปบันทึกที่: {summary_path}")
+
+    # ลบไฟล์ที่อัปโหลดทิ้ง (ไม่บังคับ)
+    try:
+        genai.delete_file(f.name)
+    except Exception:
+        pass
+
+    return summary
 
 
 def transcribe(audio_path: Path, model_size: str, out_dir: Path) -> str:
@@ -235,14 +315,24 @@ def main():
         print("   3. รัน run.bat อีกครั้ง")
         sys.exit(1)
 
-    print("\n📝 Step 3/3: ถอด transcript + สรุป...")
-    transcript = transcribe(audio_path, WHISPER_MODEL, OUTPUT_DIR)
-    summary    = summarize(transcript, GEMINI_API_KEY, OUTPUT_DIR)
+    if ENGINE == "whisper":
+        # โหมดช้า: ถอด transcript เต็มในเครื่องด้วย faster-whisper
+        print("\n📝 Step 3/3: ถอด transcript + สรุป (โหมด whisper)...")
+        transcript = transcribe(audio_path, WHISPER_MODEL, OUTPUT_DIR)
+        summary    = summarize(transcript, GEMINI_API_KEY, OUTPUT_DIR)
+        print("\n" + "=" * 55)
+        print("🎉 เสร็จสมบูรณ์!")
+        print(f"   📄 Transcript : {OUTPUT_DIR}\\transcript.txt")
+        print(f"   📝 Summary    : {OUTPUT_DIR}\\summary.md")
+    else:
+        # โหมดเร็ว (แนะนำ): ส่งเสียงให้ Gemini สรุปตรงๆ
+        print("\n📝 Step 3/3: สรุปด้วย Gemini (โหมดเร็ว)...")
+        audio = extract_audio_small(audio_path, OUTPUT_DIR)
+        summary = summarize_from_audio(audio, GEMINI_API_KEY, OUTPUT_DIR)
+        print("\n" + "=" * 55)
+        print("🎉 เสร็จสมบูรณ์!")
+        print(f"   📝 Summary : {OUTPUT_DIR}\\summary.md")
 
-    print("\n" + "=" * 55)
-    print("🎉 เสร็จสมบูรณ์!")
-    print(f"   📄 Transcript : {OUTPUT_DIR}\\transcript.txt")
-    print(f"   📝 Summary    : {OUTPUT_DIR}\\summary.md")
     print("=" * 55)
     print("\n--- สรุป ---\n")
     print(summary)
