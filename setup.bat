@@ -6,54 +6,53 @@ echo.
 
 echo [1/4] Checking Python...
 
-REM Try python command first
-python --version >nul 2>&1
-if not errorlevel 1 goto python_ok
+set PYTHON=
 
-REM Try python3
-python3 --version >nul 2>&1
+REM Try python in PATH first
+python --version >nul 2>&1
 if not errorlevel 1 (
-    set PYTHON=python3
+    set PYTHON=python
     goto python_ok
 )
 
-REM Try common install locations
+REM Search Anaconda / Miniconda locations
 for %%P in (
+    "%USERPROFILE%\anaconda3\python.exe"
+    "%USERPROFILE%\Anaconda3\python.exe"
+    "%USERPROFILE%\miniconda3\python.exe"
+    "%USERPROFILE%\Miniconda3\python.exe"
+    "%LOCALAPPDATA%\anaconda3\python.exe"
+    "%LOCALAPPDATA%\Anaconda3\python.exe"
+    "%LOCALAPPDATA%\miniconda3\python.exe"
+    "C:\anaconda3\python.exe"
+    "C:\Anaconda3\python.exe"
+    "C:\ProgramData\Anaconda3\python.exe"
+    "C:\ProgramData\anaconda3\python.exe"
     "%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
     "%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
     "%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
     "%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
-    "%LOCALAPPDATA%\Programs\Python\Python39\python.exe"
-    "C:\Python313\python.exe"
-    "C:\Python312\python.exe"
-    "C:\Python311\python.exe"
-    "C:\Python310\python.exe"
 ) do (
     if exist %%P (
         set PYTHON=%%P
-        echo   Found Python at: %%P
+        echo   Found at: %%P
         goto python_ok
     )
 )
 
-echo   ERROR: Python not found in PATH or common locations.
-echo   Please open Python installer and check "Add to PATH"
-echo   or restart your computer after installing.
+echo   ERROR: Python not found.
+echo   Try running from "Anaconda Prompt" instead of CMD.
 pause
 exit /b 1
 
 :python_ok
-if not defined PYTHON set PYTHON=python
 %PYTHON% --version
 echo   OK
 
 echo.
 echo [2/4] Installing ffmpeg...
 winget install --id Gyan.FFmpeg -e --silent 2>nul
-if errorlevel 1 (
-    winget install ffmpeg --silent 2>nul
-)
-echo   OK (if ffmpeg was missing, close and reopen CMD after this)
+echo   Done (ignore warnings above)
 
 echo.
 echo [3/4] Installing Python packages...
@@ -69,7 +68,7 @@ echo.
 echo [4/4] Setting up .env file...
 if not exist ".env" (
     copy .env.example .env >nul
-    echo   Created .env - Opening for you to fill in...
+    echo   Created .env - Opening Notepad to fill in values...
     notepad .env
 ) else (
     echo   .env already exists - OK
@@ -78,10 +77,6 @@ if not exist ".env" (
 echo.
 echo ================================================
 echo   Setup complete!
-echo.
-echo   Next steps:
-echo   1. Fill in FACEBOOK_VIDEO_URL and GEMINI_API_KEY in .env
-echo   2. Open Chrome, login to Facebook, then CLOSE Chrome
-echo   3. Double-click run.bat
+echo   Next: fill .env then double-click run.bat
 echo ================================================
 pause
