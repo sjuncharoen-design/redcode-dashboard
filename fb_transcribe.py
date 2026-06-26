@@ -43,7 +43,7 @@ def install_deps():
         [sys.executable, "-m", "pip", "install", "-U", "yt-dlp", "-q"],
         capture_output=True
     )
-    pkgs = ["google-generativeai", "imageio-ffmpeg"]
+    pkgs = ["google-genai", "imageio-ffmpeg"]
     if ENGINE == "whisper":
         pkgs.append("faster-whisper")
     for pkg in pkgs:
@@ -164,23 +164,27 @@ def extract_audio_small(media_path: Path, out_dir: Path) -> Path:
 def summarize_from_audio(audio_path: Path, api_key: str, out_dir: Path) -> str:
     """อัปโหลดเสียงให้ Gemini แล้วสรุปโดยตรง (ไม่ต้องถอด transcript ในเครื่อง)"""
     import time
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
     print("   กำลังอัปโหลดเสียงไป Gemini...")
-    f = genai.upload_file(str(audio_path))
+    with open(audio_path, "rb") as f:
+        uploaded = client.files.upload(
+            file=f,
+            config=types.UploadFileConfig(mime_type="audio/mpeg", display_name=audio_path.name),
+        )
+
     # รอจน Gemini ประมวลผลไฟล์เสร็จ
-    while getattr(f.state, "name", str(f.state)) == "PROCESSING":
+    while uploaded.state.name == "PROCESSING":
         time.sleep(2)
-        f = genai.get_file(f.name)
-    if getattr(f.state, "name", str(f.state)) == "FAILED":
+        uploaded = client.files.get(name=uploaded.name)
+    if uploaded.state.name == "FAILED":
         print("❌ Gemini ประมวลผลไฟล์เสียงไม่สำเร็จ")
         sys.exit(1)
 
     print("   กำลังให้ Gemini ฟังและสรุป...")
-    model = genai.GenerativeModel(GEMINI_MODEL)
-
     prompt = """คุณคือนักวิเคราะห์หุ้นไทย (SET) เชี่ยวชาญด้าน Contrarian Value Investing
 
 ฟังเสียงคลิปนี้ (เป็นภาษาไทย) แล้วสรุปเป็นภาษาไทยในหัวข้อต่อไปนี้:
@@ -192,17 +196,18 @@ def summarize_from_audio(audio_path: Path, api_key: str, out_dir: Path) -> str:
 5. **Action items** — มีอะไรที่ควรติดตามหรือศึกษาต่อ
 6. **คำพูดสำคัญ (quotes)** — ยกประโยคเด็ดๆ 3-5 ประโยคที่น่าสนใจ
 """
-
-    response = model.generate_content([prompt, f])
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=[prompt, types.Part.from_uri(file_uri=uploaded.uri, mime_type="audio/mpeg")],
+    )
     summary = response.text
 
     summary_path = out_dir / "summary.md"
     summary_path.write_text(summary, encoding="utf-8")
     print(f"✅ สรุปบันทึกที่: {summary_path}")
 
-    # ลบไฟล์ที่อัปโหลดทิ้ง (ไม่บังคับ)
     try:
-        genai.delete_file(f.name)
+        client.files.delete(name=uploaded.name)
     except Exception:
         pass
 
@@ -249,9 +254,8 @@ def transcribe(audio_path: Path, model_size: str, out_dir: Path) -> str:
 def summarize(transcript: str, api_key: str, out_dir: Path) -> str:
     print("\n🤖 กำลังสรุปด้วย Gemini...")
 
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    from google import genai
+    client = genai.Client(api_key=api_key)
 
     MAX_CHARS = 800_000
     note = ""
@@ -274,7 +278,7 @@ TRANSCRIPT:
 {transcript}
 """
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     summary = response.text + note
 
     summary_path = out_dir / "summary.md"
