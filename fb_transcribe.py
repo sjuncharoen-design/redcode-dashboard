@@ -42,6 +42,22 @@ def install_deps():
         )
     print("✅ Dependencies ready")
 
+def _find_ytdlp() -> str:
+    # yt-dlp อาจอยู่ใน Anaconda Scripts ซึ่งไม่ได้อยู่ใน PATH
+    import shutil
+    found = shutil.which("yt-dlp")
+    if found:
+        return found
+    # หาจาก Scripts folder ข้างๆ python.exe
+    scripts = Path(sys.executable).parent / "Scripts" / "yt-dlp.exe"
+    if scripts.exists():
+        return str(scripts)
+    scripts2 = Path(sys.executable).parent / "yt-dlp.exe"
+    if scripts2.exists():
+        return str(scripts2)
+    # fallback: รันผ่าน python -m yt_dlp
+    return None
+
 def download_audio(url: str, out_dir: Path) -> Path:
     out_dir.mkdir(exist_ok=True)
     audio_path = out_dir / "audio.mp3"
@@ -49,10 +65,16 @@ def download_audio(url: str, out_dir: Path) -> Path:
     if audio_path.exists():
         audio_path.unlink()
 
-    print("⬇️  กำลังดาวน์โหลดเสียงจาก Facebook...")
-    print("   (ต้องเปิด Chrome และ login Facebook ไว้ก่อน)")
-    cmd = [
-        "yt-dlp",
+    print("Downloading audio from Facebook...")
+    print("   (Chrome must be closed after login)")
+
+    ytdlp = _find_ytdlp()
+    if ytdlp:
+        cmd = [ytdlp]
+    else:
+        cmd = [sys.executable, "-m", "yt_dlp"]
+
+    cmd += [
         "--extract-audio",
         "--audio-format", "mp3",
         "--audio-quality", "0",
