@@ -30,17 +30,17 @@ OUTPUT_DIR         = Path(os.environ.get("OUTPUT_DIR", "fb_output"))
 # ============================
 
 def install_deps():
-    pkgs = [
-        "yt-dlp",
-        "faster-whisper",
-        "google-generativeai",
-    ]
-    for pkg in pkgs:
-        result = subprocess.run(
+    # yt-dlp ต้อง update บ่อยเพราะ Facebook เปลี่ยน API ตลอด
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-U", "yt-dlp", "-q"],
+        capture_output=True
+    )
+    for pkg in ["faster-whisper", "google-generativeai"]:
+        subprocess.run(
             [sys.executable, "-m", "pip", "install", pkg, "-q"],
             capture_output=True
         )
-    print("✅ Dependencies ready")
+    print("Dependencies ready")
 
 def _find_ytdlp() -> str:
     # yt-dlp อาจอยู่ใน Anaconda Scripts ซึ่งไม่ได้อยู่ใน PATH
