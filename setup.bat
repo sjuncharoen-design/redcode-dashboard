@@ -1,55 +1,58 @@
 @echo off
-chcp 65001 >nul
 echo ================================================
-echo   ติดตั้ง fb_transcribe — กด Enter เพื่อเริ่ม
+echo   Setup fb_transcribe
 echo ================================================
-pause
-
 echo.
-echo [1/4] ตรวจสอบ Python...
+
+echo [1/4] Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo   ไม่พบ Python — กรุณาติดตั้งที่ https://python.org
-    echo   อย่าลืมติ๊ก "Add to PATH" ตอนติดตั้ง
+    echo   ERROR: Python not found.
+    echo   Please install from https://python.org
+    echo   Make sure to check "Add to PATH" during install.
     pause
     exit /b 1
 )
 python --version
+echo   OK
 
 echo.
-echo [2/4] ติดตั้ง ffmpeg...
+echo [2/4] Installing ffmpeg...
 winget install --id Gyan.FFmpeg -e --silent
 if errorlevel 1 (
-    echo   ติดตั้ง ffmpeg ล้มเหลว — ลองรัน: winget install ffmpeg
+    echo   WARNING: ffmpeg install may have failed.
+    echo   Try manually: winget install ffmpeg
 )
+echo   OK
 
 echo.
-echo [3/4] ติดตั้ง Python packages...
+echo [3/4] Installing Python packages...
 pip install yt-dlp faster-whisper google-generativeai -q
 if errorlevel 1 (
-    echo   ติดตั้ง packages ล้มเหลว
+    echo   ERROR: pip install failed.
     pause
     exit /b 1
 )
+echo   OK
 
 echo.
-echo [4/4] ตรวจสอบไฟล์ .env...
+echo [4/4] Setting up .env file...
 if not exist ".env" (
-    echo   ยังไม่มีไฟล์ .env — กำลังสร้างจาก .env.example...
     copy .env.example .env >nul
-    echo   สร้างแล้ว! เปิดไฟล์ .env แล้วใส่ URL และ API Key ของคุณ
+    echo   Created .env - Opening for you to fill in...
+    echo   Please set FACEBOOK_VIDEO_URL and GEMINI_API_KEY
     notepad .env
 ) else (
-    echo   พบไฟล์ .env แล้ว
+    echo   .env already exists - OK
 )
 
 echo.
 echo ================================================
-echo   ติดตั้งเสร็จแล้ว!
+echo   Setup complete!
 echo.
-echo   ขั้นต่อไป:
-echo   1. ใส่ FACEBOOK_VIDEO_URL และ GEMINI_API_KEY ใน .env
-echo   2. เปิด Chrome → login Facebook → ปิด Chrome
-echo   3. ดับเบิ้ลคลิก run.bat
+echo   Next steps:
+echo   1. Fill in FACEBOOK_VIDEO_URL and GEMINI_API_KEY in .env
+echo   2. Open Chrome, login to Facebook, then CLOSE Chrome
+echo   3. Double-click run.bat
 echo ================================================
 pause

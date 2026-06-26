@@ -1,13 +1,12 @@
 @echo off
-chcp 65001 >nul
 echo ================================================
-echo   fb_transcribe — เริ่มทำงาน
+echo   fb_transcribe - Starting...
 echo ================================================
 echo.
 
 if not exist ".env" (
-    echo ❌ ไม่พบไฟล์ .env
-    echo    รัน setup.bat ก่อน หรือสร้างไฟล์ .env เอง
+    echo ERROR: .env file not found.
+    echo Please run setup.bat first.
     pause
     exit /b 1
 )
