@@ -5,29 +5,59 @@ echo ================================================
 echo.
 
 echo [1/4] Checking Python...
+
+REM Try python command first
 python --version >nul 2>&1
-if errorlevel 1 (
-    echo   ERROR: Python not found.
-    echo   Please install from https://python.org
-    echo   Make sure to check "Add to PATH" during install.
-    pause
-    exit /b 1
+if not errorlevel 1 goto python_ok
+
+REM Try python3
+python3 --version >nul 2>&1
+if not errorlevel 1 (
+    set PYTHON=python3
+    goto python_ok
 )
-python --version
+
+REM Try common install locations
+for %%P in (
+    "%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+    "%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+    "%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+    "%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
+    "%LOCALAPPDATA%\Programs\Python\Python39\python.exe"
+    "C:\Python313\python.exe"
+    "C:\Python312\python.exe"
+    "C:\Python311\python.exe"
+    "C:\Python310\python.exe"
+) do (
+    if exist %%P (
+        set PYTHON=%%P
+        echo   Found Python at: %%P
+        goto python_ok
+    )
+)
+
+echo   ERROR: Python not found in PATH or common locations.
+echo   Please open Python installer and check "Add to PATH"
+echo   or restart your computer after installing.
+pause
+exit /b 1
+
+:python_ok
+if not defined PYTHON set PYTHON=python
+%PYTHON% --version
 echo   OK
 
 echo.
 echo [2/4] Installing ffmpeg...
-winget install --id Gyan.FFmpeg -e --silent
+winget install --id Gyan.FFmpeg -e --silent 2>nul
 if errorlevel 1 (
-    echo   WARNING: ffmpeg install may have failed.
-    echo   Try manually: winget install ffmpeg
+    winget install ffmpeg --silent 2>nul
 )
-echo   OK
+echo   OK (if ffmpeg was missing, close and reopen CMD after this)
 
 echo.
 echo [3/4] Installing Python packages...
-pip install yt-dlp faster-whisper google-generativeai -q
+%PYTHON% -m pip install yt-dlp faster-whisper google-generativeai -q
 if errorlevel 1 (
     echo   ERROR: pip install failed.
     pause
@@ -40,7 +70,6 @@ echo [4/4] Setting up .env file...
 if not exist ".env" (
     copy .env.example .env >nul
     echo   Created .env - Opening for you to fill in...
-    echo   Please set FACEBOOK_VIDEO_URL and GEMINI_API_KEY
     notepad .env
 ) else (
     echo   .env already exists - OK
