@@ -74,23 +74,30 @@ def download_audio(url: str, out_dir: Path) -> Path:
     else:
         cmd = [sys.executable, "-m", "yt_dlp"]
 
+    # ใช้ cookies.txt ถ้ามี (แก้ปัญหา Chrome 127+ DPAPI encryption)
+    cookies_file = Path(__file__).parent / "cookies.txt"
+    if cookies_file.exists():
+        print("   Using cookies.txt file")
+        cookie_args = ["--cookies", str(cookies_file)]
+    else:
+        print("   Using Chrome browser cookies (close Chrome first!)")
+        cookie_args = ["--cookies-from-browser", "chrome"]
+
     cmd += [
         "--extract-audio",
         "--audio-format", "mp3",
         "--audio-quality", "0",
-        "--cookies-from-browser", "chrome",
+        *cookie_args,
         "--no-playlist",
         "-o", str(audio_path),
         url
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     if result.returncode != 0:
-        print("❌ Download failed:")
-        print(result.stderr[-800:])
-        print("\n💡 วิธีแก้:")
-        print("   1. เปิด Chrome → login Facebook")
-        print("   2. ปิด Chrome ทุกหน้าต่าง")
-        print("   3. รัน script ใหม่")
+        print("Download failed:")
+        print(result.stderr[-1200:])
+        print("\nFix: Export cookies from Chrome using 'Get cookies.txt LOCALLY' extension")
+        print("     Save as 'cookies.txt' in the same folder as this script, then run again.")
         sys.exit(1)
 
     print(f"✅ ดาวน์โหลดสำเร็จ → {audio_path}")
