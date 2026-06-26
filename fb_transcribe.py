@@ -3,19 +3,30 @@ fb_transcribe.py
 ================
 Facebook Group (ปิด) → เสียง → Transcript (faster-whisper) → สรุป (Gemini Free)
 วิธีใช้: python fb_transcribe.py
+หรือ:   FACEBOOK_VIDEO_URL="https://..." python fb_transcribe.py
 """
 
+import os
 import sys
 import subprocess
 from pathlib import Path
 
+# โหลด .env ถ้ามี (ไม่บังคับ)
+_env_file = Path(__file__).parent / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text(encoding="utf-8").splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _, _v = _line.partition("=")
+            os.environ.setdefault(_k.strip(), _v.strip())
+
 # ============================
-# CONFIG — แก้ตรงนี้ 2 บรรทัด
+# CONFIG — ใส่ใน .env หรือแก้ตรงนี้
 # ============================
-FACEBOOK_VIDEO_URL = "https://www.facebook.com/groups/XXXX/posts/XXXX"
-GEMINI_API_KEY     = "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-WHISPER_MODEL      = "small"   # small=เร็ว / medium=แม่นยำกว่า
-OUTPUT_DIR         = Path("fb_output")
+FACEBOOK_VIDEO_URL = os.environ.get("FACEBOOK_VIDEO_URL", "")
+GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
+WHISPER_MODEL      = os.environ.get("WHISPER_MODEL", "small")  # small=เร็ว / medium=แม่นยำกว่า
+OUTPUT_DIR         = Path(os.environ.get("OUTPUT_DIR", "fb_output"))
 # ============================
 
 def install_deps():
@@ -142,14 +153,14 @@ def main():
     print("  (faster-whisper + Gemini Free)")
     print("=" * 55)
 
-    if "XXXX" in FACEBOOK_VIDEO_URL:
+    if not FACEBOOK_VIDEO_URL:
         print("\n❌ ยังไม่ได้ใส่ URL")
-        print("   แก้บรรทัด FACEBOOK_VIDEO_URL ใน script ก่อน")
+        print("   ใส่ใน .env:  FACEBOOK_VIDEO_URL=https://www.facebook.com/...")
         sys.exit(1)
-    if "AIzaSyXXX" in GEMINI_API_KEY:
+    if not GEMINI_API_KEY:
         print("\n❌ ยังไม่ได้ใส่ Gemini API Key")
         print("   ขอ key ฟรีที่: https://aistudio.google.com/app/apikey")
-        print("   แล้วแก้บรรทัด GEMINI_API_KEY ใน script")
+        print("   ใส่ใน .env:  GEMINI_API_KEY=AIzaSy...")
         sys.exit(1)
 
     print("\n📦 Step 1/3: ติดตั้ง packages...")
