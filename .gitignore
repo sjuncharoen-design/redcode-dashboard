@@ -1,4 +1,15 @@
 .env
+cookies.txt
 fb_output/
 __pycache__/
 *.pyc
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.avi
+*.m4a
+*.mp3
+*.wav
+*.aac
+*.flac

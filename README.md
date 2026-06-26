@@ -1,6 +1,10 @@
 # fb_transcribe — Facebook Video → Transcript + สรุปหุ้น
 
-ดาวน์โหลดวีดีโอ Facebook → ถอด transcript → สรุปด้วย Gemini AI
+วีดีโอ Facebook → ถอด transcript → สรุปด้วย Gemini AI
+
+> **สำคัญ:** การโหลดวีดีโอจากกลุ่มปิดอัตโนมัติ (yt-dlp) มักไม่สำเร็จ
+> วิธีที่ชัวร์ที่สุดคือ **โหลดวีดีโอเองด้วย extension แล้ววางไฟล์ไว้ในโฟลเดอร์**
+> จากนั้น script จะถอดเสียง + สรุปให้
 
 ---
 
@@ -12,28 +16,26 @@
 
 ### 2. ขอ Gemini API Key ฟรี
 - ไปที่ https://aistudio.google.com/app/apikey
-- กด **"Create API key in new project"**
-- คัดลอก key ไว้
+- กด **"Create API key in new project"** → คัดลอก key ไว้
 
 ### 3. รัน setup.bat
-- ดับเบิ้ลคลิกไฟล์ **setup.bat**
-- รอจนเสร็จ จะเปิด Notepad ให้ใส่ค่า
+- ดับเบิ้ลคลิก **setup.bat** → รอจนเสร็จ จะเปิด Notepad
+- ใส่ `GEMINI_API_KEY=...` แล้วบันทึก
 
-### 4. ใส่ค่าใน .env
-```
-FACEBOOK_VIDEO_URL=https://www.facebook.com/groups/XXXX/posts/XXXX
-GEMINI_API_KEY=AIzaSy...ใส่ key ของคุณ
-```
-บันทึกไฟล์แล้วปิด Notepad
+### 4. ติดตั้ง extension โหลดวีดีโอ (ใน Chrome)
+- ติดตั้ง **"Video DownloadHelper"** จาก Chrome Web Store
 
 ---
 
 ## ใช้งานทุกครั้ง
 
-1. เปิด **Chrome** → login Facebook → **ปิด Chrome ทุกหน้าต่าง**
-2. แก้ `FACEBOOK_VIDEO_URL` ใน `.env` ให้เป็น URL วีดีโอที่ต้องการ
-3. ดับเบิ้ลคลิก **run.bat**
-4. รอ 10-15 นาที (วีดีโอ 2-3 ชม.)
+1. เปิดวีดีโอใน Facebook → กดเล่นสัก 2-3 วินาที
+2. กด icon **Video DownloadHelper** → ดาวน์โหลดไฟล์ `.mp4`
+3. **ย้ายไฟล์ `.mp4` มาวางในโฟลเดอร์เดียวกับ `run.bat`**
+4. ดับเบิ้ลคลิก **run.bat**
+5. รอ 10-15 นาที (วีดีโอ 2-3 ชม.)
+
+> script จะหาไฟล์วีดีโอในโฟลเดอร์ให้อัตโนมัติ ไม่ต้องตั้งค่าอะไรเพิ่ม
 
 ---
 
@@ -46,23 +48,23 @@ GEMINI_API_KEY=AIzaSy...ใส่ key ของคุณ
 
 ---
 
-## ปรับแต่ง
+## ปรับแต่ง (ใน .env)
 
-ใน `.env` เพิ่มได้:
 ```
-WHISPER_MODEL=medium   # medium แม่นยำกว่า small แต่ช้ากว่า
-OUTPUT_DIR=my_output   # เปลี่ยนโฟลเดอร์ output
+LOCAL_FILE=C:\path\to\video.mp4   # ระบุไฟล์ตรงๆ (ถ้าไม่อยากวางในโฟลเดอร์)
+WHISPER_MODEL=medium              # แม่นยำกว่า small แต่ช้ากว่า
+OUTPUT_DIR=my_output              # เปลี่ยนโฟลเดอร์ output
 ```
 
 ---
 
 ## แก้ปัญหาที่พบบ่อย
 
-**Download failed / ไม่ได้รับอนุญาต**
-→ เปิด Chrome → login Facebook → ปิด Chrome ทุกหน้าต่าง → รันใหม่
+**script บอกไม่เจอไฟล์**
+→ ตรวจว่าไฟล์ `.mp4` อยู่ในโฟลเดอร์เดียวกับ `run.bat` จริงๆ
 
 **ไม่เจอ ffmpeg**
-→ เปิด Command Prompt พิมพ์ `winget install ffmpeg` แล้วปิด-เปิด CMD ใหม่
+→ เปิด CMD พิมพ์ `winget install ffmpeg` แล้วปิด-เปิด CMD ใหม่
 
-**pip install error**
-→ รัน `python -m pip install --upgrade pip` แล้วลองใหม่
+**Video DownloadHelper โหลดไม่ได้**
+→ ลอง extension อื่น เช่น "FBDOWN" หรือเล่นวีดีโอจนสุดก่อนกดโหลด

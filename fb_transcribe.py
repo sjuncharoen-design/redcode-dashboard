@@ -24,10 +24,14 @@ if _env_file.exists():
 # CONFIG — ใส่ใน .env หรือแก้ตรงนี้
 # ============================
 FACEBOOK_VIDEO_URL = os.environ.get("FACEBOOK_VIDEO_URL", "")
+LOCAL_FILE         = os.environ.get("LOCAL_FILE", "")  # path ไฟล์วีดีโอ/เสียงในเครื่อง (ถ้ามี จะข้ามการดาวน์โหลด)
 GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
 WHISPER_MODEL      = os.environ.get("WHISPER_MODEL", "small")  # small=เร็ว / medium=แม่นยำกว่า
 OUTPUT_DIR         = Path(os.environ.get("OUTPUT_DIR", "fb_output"))
 # ============================
+
+# นามสกุลไฟล์วีดีโอ/เสียงที่รองรับ
+MEDIA_EXTS = (".mp4", ".mkv", ".webm", ".mov", ".avi", ".m4a", ".mp3", ".wav", ".aac", ".flac")
 
 def install_deps():
     # yt-dlp ต้อง update บ่อยเพราะ Facebook เปลี่ยน API ตลอด
@@ -102,6 +106,28 @@ def download_audio(url: str, out_dir: Path) -> Path:
 
     print(f"✅ ดาวน์โหลดสำเร็จ → {audio_path}")
     return audio_path
+
+def find_local_media() -> Path:
+    """หาไฟล์วีดีโอ/เสียงในเครื่อง: จาก LOCAL_FILE ก่อน, ไม่งั้นสแกนในโฟลเดอร์ script"""
+    if LOCAL_FILE:
+        p = Path(LOCAL_FILE)
+        if p.exists():
+            return p
+        print(f"Warning: LOCAL_FILE ไม่พบไฟล์: {LOCAL_FILE}")
+
+    # สแกนหาไฟล์ media ในโฟลเดอร์เดียวกับ script (ยกเว้นไฟล์ output ของเราเอง)
+    here = Path(__file__).parent
+    candidates = [
+        f for f in here.iterdir()
+        if f.is_file() and f.suffix.lower() in MEDIA_EXTS
+    ]
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        # เลือกไฟล์ที่ใหญ่ที่สุด (น่าจะเป็นวีดีโอที่โหลดมา)
+        return max(candidates, key=lambda f: f.stat().st_size)
+    return None
+
 
 def transcribe(audio_path: Path, model_size: str, out_dir: Path) -> str:
     print(f"\n🎙️  กำลังถอด transcript (faster-whisper / model={model_size})")
@@ -182,10 +208,6 @@ def main():
     print("  (faster-whisper + Gemini Free)")
     print("=" * 55)
 
-    if not FACEBOOK_VIDEO_URL:
-        print("\n❌ ยังไม่ได้ใส่ URL")
-        print("   ใส่ใน .env:  FACEBOOK_VIDEO_URL=https://www.facebook.com/...")
-        sys.exit(1)
     if not GEMINI_API_KEY:
         print("\n❌ ยังไม่ได้ใส่ Gemini API Key")
         print("   ขอ key ฟรีที่: https://aistudio.google.com/app/apikey")
@@ -195,8 +217,23 @@ def main():
     print("\n📦 Step 1/3: ติดตั้ง packages...")
     install_deps()
 
-    print("\n📥 Step 2/3: ดาวน์โหลดเสียง...")
-    audio_path = download_audio(FACEBOOK_VIDEO_URL, OUTPUT_DIR)
+    print("\n📥 Step 2/3: หาไฟล์เสียง/วีดีโอ...")
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    media = find_local_media()
+    if media:
+        # มีไฟล์ในเครื่อง → ข้ามการดาวน์โหลด
+        print(f"✅ ใช้ไฟล์ในเครื่อง: {media.name}")
+        audio_path = media
+    elif FACEBOOK_VIDEO_URL:
+        # ไม่มีไฟล์ → ลองดาวน์โหลดด้วย yt-dlp
+        audio_path = download_audio(FACEBOOK_VIDEO_URL, OUTPUT_DIR)
+    else:
+        print("\n❌ ไม่พบไฟล์วีดีโอ/เสียง และไม่ได้ใส่ URL")
+        print("\n   วิธีที่ง่ายที่สุด (แนะนำ):")
+        print("   1. โหลดวีดีโอจาก Facebook ด้วย extension 'Video DownloadHelper'")
+        print("   2. เอาไฟล์ที่ได้ (.mp4) มาวางในโฟลเดอร์เดียวกับ run.bat")
+        print("   3. รัน run.bat อีกครั้ง")
+        sys.exit(1)
 
     print("\n📝 Step 3/3: ถอด transcript + สรุป...")
     transcript = transcribe(audio_path, WHISPER_MODEL, OUTPUT_DIR)
