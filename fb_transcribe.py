@@ -31,7 +31,7 @@ OUTPUT_DIR         = Path(os.environ.get("OUTPUT_DIR", "fb_output"))
 # ENGINE: "gemini" = ส่งเสียงให้ Gemini สรุปตรงๆ (เร็วมาก, แนะนำ)
 #         "whisper" = ถอดเสียงในเครื่องด้วย faster-whisper (ช้า แต่ได้ transcript เต็ม)
 ENGINE             = os.environ.get("ENGINE", "gemini").lower()
-GEMINI_MODEL       = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL       = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 # ============================
 
 # นามสกุลไฟล์วีดีโอ/เสียงที่รองรับ
@@ -136,81 +136,141 @@ def find_local_media() -> Path:
     return None
 
 
-def extract_audio_small(media_path: Path, out_dir: Path) -> Path:
-    """ดึงเฉพาะเสียงออกมาเป็น mp3 ขนาดเล็ก (mono 16kHz) เพื่ออัปโหลดให้ Gemini เร็วๆ"""
+def _ffmpeg() -> str:
     import imageio_ffmpeg
-    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    return imageio_ffmpeg.get_ffmpeg_exe()
 
-    audio = out_dir / "audio.mp3"
-    if audio.exists():
-        audio.unlink()
 
-    print("   กำลังดึงเสียงออกจากวีดีโอ...")
+def extract_audio_chunks(media_path: Path, out_dir: Path, minutes: int = 20) -> list:
+    """ดึงเสียงออกมาเป็น mp3 เล็กๆ แล้วตัดเป็นช่วงละ N นาที (กันเกิน quota ต่อนาที)"""
+    ffmpeg = _ffmpeg()
+
+    # ลบ chunk เก่า
+    for old in out_dir.glob("chunk_*.mp3"):
+        old.unlink()
+
+    print(f"   กำลังดึงเสียง + ตัดเป็นช่วงละ {minutes} นาที...")
+    pattern = str(out_dir / "chunk_%03d.mp3")
     cmd = [
         ffmpeg, "-y", "-i", str(media_path),
         "-vn", "-ac", "1", "-ar", "16000", "-b:a", "64k",
-        str(audio),
+        "-f", "segment", "-segment_time", str(minutes * 60),
+        pattern,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    if not audio.exists():
+    chunks = sorted(out_dir.glob("chunk_*.mp3"))
+    if not chunks:
         print("❌ ดึงเสียงไม่สำเร็จ:")
         print(result.stderr[-800:])
         sys.exit(1)
-    mb = audio.stat().st_size / 1_000_000
-    print(f"   ได้ไฟล์เสียง {mb:.1f} MB")
-    return audio
+    print(f"   ได้ {len(chunks)} ช่วง")
+    return chunks
+
+
+def _gen_with_retry(client, contents, max_wait_rounds: int = 8):
+    """เรียก Gemini พร้อม retry อัตโนมัติเมื่อเจอ quota เต็ม (429) — รอแล้วลองใหม่"""
+    import time
+    import re as _re
+    from google.genai import errors as genai_errors
+
+    # ลองหลาย model เผื่อบางตัว quota หมด
+    models = [GEMINI_MODEL, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+    seen = []
+    for m in models:
+        if m not in seen:
+            seen.append(m)
+
+    last_err = None
+    for model in seen:
+        for attempt in range(max_wait_rounds):
+            try:
+                return client.models.generate_content(model=model, contents=contents)
+            except genai_errors.ClientError as e:
+                last_err = e
+                msg = str(e)
+                if "RESOURCE_EXHAUSTED" in msg or "429" in msg:
+                    # หาเวลาที่ต้องรอจาก retryDelay ถ้ามี
+                    m_delay = _re.search(r"retry in ([\d.]+)s", msg) or _re.search(r"'retryDelay': '(\d+)s'", msg)
+                    wait = float(m_delay.group(1)) if m_delay else 30
+                    wait = min(max(wait + 2, 10), 65)
+                    print(f"   ⏳ quota เต็ม ({model}) รอ {wait:.0f} วิ แล้วลองใหม่... ({attempt+1})")
+                    time.sleep(wait)
+                    continue
+                # error อื่นที่ไม่ใช่ quota → ลอง model ถัดไป
+                print(f"   model {model} ใช้ไม่ได้: {msg[:120]}")
+                break
+        # ถ้า model นี้ลองครบรอบแล้วยังไม่ได้ → ไป model ถัดไป
+    raise last_err
+
+
+def _upload_and_wait(client, types, path: Path):
+    import time
+    with open(path, "rb") as fh:
+        up = client.files.upload(
+            file=fh,
+            config=types.UploadFileConfig(mime_type="audio/mpeg", display_name=path.name),
+        )
+    while up.state.name == "PROCESSING":
+        time.sleep(2)
+        up = client.files.get(name=up.name)
+    if up.state.name == "FAILED":
+        raise RuntimeError("Gemini ประมวลผลไฟล์ไม่สำเร็จ: " + path.name)
+    return up
 
 
 def summarize_from_audio(audio_path: Path, api_key: str, out_dir: Path) -> str:
-    """อัปโหลดเสียงให้ Gemini แล้วสรุปโดยตรง (ไม่ต้องถอด transcript ในเครื่อง)"""
-    import time
+    """ตัดเสียงเป็นช่วงๆ → สรุปทีละช่วง → รวมเป็นสรุปใหญ่ (retry quota อัตโนมัติ)"""
     from google import genai
     from google.genai import types
 
     client = genai.Client(api_key=api_key)
+    chunks = extract_audio_chunks(audio_path, out_dir, minutes=20)
 
-    print("   กำลังอัปโหลดเสียงไป Gemini...")
-    with open(audio_path, "rb") as f:
-        uploaded = client.files.upload(
-            file=f,
-            config=types.UploadFileConfig(mime_type="audio/mpeg", display_name=audio_path.name),
+    chunk_prompt = """ฟังเสียงช่วงนี้ (ภาษาไทย เรื่องหุ้นไทย SET) แล้วจดประเด็นสำคัญแบบ bullet สั้นๆ:
+- หุ้น/บริษัทที่พูดถึง + ประเด็น
+- ตัวเลขสำคัญ (ราคา, P/E, EPS, growth ฯลฯ)
+- มุมมอง (bullish/bearish/neutral)
+- คำพูดเด็ดที่น่าสนใจ
+ตอบเป็นภาษาไทย เอาเฉพาะเนื้อหา ไม่ต้องเกริ่น"""
+
+    notes = []
+    for i, ch in enumerate(chunks, 1):
+        print(f"\n   [{i}/{len(chunks)}] อัปโหลด + สรุปช่วงที่ {i}...")
+        up = _upload_and_wait(client, types, ch)
+        resp = _gen_with_retry(
+            client,
+            [chunk_prompt, types.Part.from_uri(file_uri=up.uri, mime_type="audio/mpeg")],
         )
+        notes.append(f"--- ช่วงที่ {i} ---\n{resp.text}")
+        try:
+            client.files.delete(name=up.name)
+        except Exception:
+            pass
 
-    # รอจน Gemini ประมวลผลไฟล์เสร็จ
-    while uploaded.state.name == "PROCESSING":
-        time.sleep(2)
-        uploaded = client.files.get(name=uploaded.name)
-    if uploaded.state.name == "FAILED":
-        print("❌ Gemini ประมวลผลไฟล์เสียงไม่สำเร็จ")
-        sys.exit(1)
+    # ถ้ามีช่วงเดียวก็ใช้เลย ไม่ต้องรวม
+    combined_notes = "\n\n".join(notes)
 
-    print("   กำลังให้ Gemini ฟังและสรุป...")
-    prompt = """คุณคือนักวิเคราะห์หุ้นไทย (SET) เชี่ยวชาญด้าน Contrarian Value Investing
+    print("\n   กำลังรวมเป็นสรุปสุดท้าย...")
+    final_prompt = f"""คุณคือนักวิเคราะห์หุ้นไทย (SET) เชี่ยวชาญด้าน Contrarian Value Investing
 
-ฟังเสียงคลิปนี้ (เป็นภาษาไทย) แล้วสรุปเป็นภาษาไทยในหัวข้อต่อไปนี้:
+ด้านล่างคือโน้ตที่จดจากคลิปทีละช่วง รวมเป็นสรุปฉบับสมบูรณ์ภาษาไทยตามหัวข้อนี้:
 
-1. **ประเด็นหลัก** — สรุป 3-5 bullet สั้นๆ ว่าพูดเรื่องอะไร
+1. **ประเด็นหลัก** — 3-5 bullet
 2. **หุ้น/บริษัทที่พูดถึง** — ชื่อ + ประเด็นสำคัญของแต่ละตัว
-3. **ตัวเลขสำคัญ** — ราคา, P/E, EPS, revenue growth หรือ metrics ที่กล่าวถึง
-4. **มุมมอง/คำแนะนำ** — ผู้พูดมีมุมมองอย่างไร (bullish/bearish/neutral)
-5. **Action items** — มีอะไรที่ควรติดตามหรือศึกษาต่อ
-6. **คำพูดสำคัญ (quotes)** — ยกประโยคเด็ดๆ 3-5 ประโยคที่น่าสนใจ
+3. **ตัวเลขสำคัญ** — ราคา, P/E, EPS, growth, metrics
+4. **มุมมอง/คำแนะนำ** — bullish/bearish/neutral
+5. **Action items** — สิ่งที่ควรติดตามต่อ
+6. **คำพูดสำคัญ (quotes)** — 3-5 ประโยคเด็ด
+
+--- โน้ตจากคลิป ---
+{combined_notes}
 """
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=[prompt, types.Part.from_uri(file_uri=uploaded.uri, mime_type="audio/mpeg")],
-    )
-    summary = response.text
+    resp = _gen_with_retry(client, [final_prompt])
+    summary = resp.text
 
     summary_path = out_dir / "summary.md"
     summary_path.write_text(summary, encoding="utf-8")
     print(f"✅ สรุปบันทึกที่: {summary_path}")
-
-    try:
-        client.files.delete(name=uploaded.name)
-    except Exception:
-        pass
-
     return summary
 
 
@@ -331,8 +391,7 @@ def main():
     else:
         # โหมดเร็ว (แนะนำ): ส่งเสียงให้ Gemini สรุปตรงๆ
         print("\n📝 Step 3/3: สรุปด้วย Gemini (โหมดเร็ว)...")
-        audio = extract_audio_small(audio_path, OUTPUT_DIR)
-        summary = summarize_from_audio(audio, GEMINI_API_KEY, OUTPUT_DIR)
+        summary = summarize_from_audio(audio_path, GEMINI_API_KEY, OUTPUT_DIR)
         print("\n" + "=" * 55)
         print("🎉 เสร็จสมบูรณ์!")
         print(f"   📝 Summary : {OUTPUT_DIR}\\summary.md")
